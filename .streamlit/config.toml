@@ -1,10 +1,10 @@
 [theme]
-primaryColor = "#3A86FF"
-backgroundColor = "#F7F9FB"
-secondaryBackgroundColor = "#FFFFFF"
+primaryColor = "#4F8A8B"
+backgroundColor = "#F5F7FA"
+secondaryBackgroundColor = "#E9ECEF"
 textColor = "#22223B"
 font = "sans serif"
-accentColor = "#FFBE0B"
+accentColor = "#FFB4A2"
 
 # Optional: success and error colors for custom CSS
 # successColor = "#43AA8B"

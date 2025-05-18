@@ -12,42 +12,44 @@ st.set_page_config(page_title="Poppy Ideation", layout="wide")
 st.markdown(
     """
     <style>
-    html, body, [class*="css"]  { font-family: 'Inter', 'Nunito', 'Segoe UI', 'sans-serif' !important; }
-    .stApp { background-color: #F7F9FB; }
+    html, body, [class*=\"css\"]  { font-family: 'Inter', 'Nunito', 'Segoe UI', 'sans-serif' !important; }
+    .stApp { background-color: #F5F7FA; }
     .stButton>button, .stForm button, .stDownloadButton>button {
-        background-color: #3A86FF;
+        background-color: #4F8A8B;
         color: #fff;
         border-radius: 8px;
         padding: 0.5em 1.2em;
         font-weight: 600;
-        box-shadow: 0 2px 8px rgba(58,134,255,0.08);
+        box-shadow: 0 2px 8px rgba(79,138,139,0.08);
         border: none;
         transition: background 0.2s;
     }
     .stButton>button:hover, .stForm button:hover, .stDownloadButton>button:hover {
-        background-color: #FFBE0B;
+        background-color: #FFB4A2;
         color: #22223B;
     }
-    .stTabs [data-baseweb="tab"] {
+    .stTabs [data-baseweb=\"tab\"] {
         font-weight: 600;
-        color: #3A86FF;
+        color: #4F8A8B;
         border-radius: 8px 8px 0 0;
-        background: #F7F9FB;
+        background: #F5F7FA;
         margin-right: 2px;
     }
-    .stTabs [aria-selected="true"] {
-        background: #fff;
+    .stTabs [aria-selected=\"true\"] {
+        background: #E9ECEF;
         color: #22223B;
-        border-bottom: 2px solid #FFBE0B;
+        border-bottom: 2px solid #FFB4A2;
     }
     .stDataFrame, .stDataEditor, .stTextInput, .stTextArea, .stSelectbox, .stNumberInput, .stExpander, .stForm {
-        border-radius: 10px !important;
-        box-shadow: 0 1px 6px rgba(34,34,59,0.04);
-        background: #fff !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 8px rgba(34,34,59,0.06);
+        background: #E9ECEF !important;
+        padding: 1.2em !important;
+        margin-bottom: 1.2em !important;
     }
     .stExpanderHeader {
         font-weight: 600;
-        color: #3A86FF;
+        color: #4F8A8B;
     }
     .stAlert, .stInfo, .stSuccess, .stError {
         border-radius: 8px !important;
@@ -61,9 +63,9 @@ st.markdown(
         font-weight: 600;
         margin-right: 0.5em;
     }
-    .status-idea { background: #E0F2FE; color: #3A86FF; }
-    .status-backlog { background: #FFF3CD; color: #FFBE0B; }
-    .status-in_progress { background: #EDE7F6; color: #8338EC; }
+    .status-idea { background: #E0F2FE; color: #4F8A8B; }
+    .status-backlog { background: #FFF3CD; color: #FFB4A2; }
+    .status-in_progress { background: #EDE7F6; color: #5A7D7C; }
     .status-done { background: #E6F4EA; color: #43AA8B; }
     .status-blocked { background: #FFF0F3; color: #FF006E; }
     </style>
