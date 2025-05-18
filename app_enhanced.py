@@ -351,21 +351,8 @@ with st.container():
             
     except Exception as e:
         st.error(f"Error fetching ideas: {str(e)}")
-    for idea in ideas:
-        formatted_ideas.append({
-            "Title": idea["title"],
-            "Description": idea["description"],
-            "Source": idea["source"],
-            "Context": idea["context"],
-            "Category": category_lookup.get(idea["category_id"], "Unknown"),
-            "Priority": priority_lookup.get(idea["priority_id"], "Unknown"),
-            "Status": status_lookup.get(idea["status_id"], "Unknown"),
-            "Created At": idea["created_at"][:10]  # just the date
-        })
 
-    # Display saved ideas with ranking and management
-    if formatted_ideas:
-        # Get all ideas with their rank
+# ... (rest of the code remains the same)
         all_ideas = supabase.table("poppy_ideas_v2").select("id", "title", "rank").execute().data
         
         # Create a DataFrame with an additional column for selection
