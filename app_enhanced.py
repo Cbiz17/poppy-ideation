@@ -98,36 +98,111 @@ with st.sidebar:
     priorities = ["low", "medium", "high", "urgent"]
     statuses = ["idea", "backlog", "in_progress", "done", "blocked"]
 
-    # Removed status filter from sidebar
     selected_priority = st.selectbox("Priority", ["All"] + priorities)
     selected_category = st.selectbox("Category", ["All"] + category_names)
 
     # Sprints
-    sprints_response = supabase.table("sprints").select("id", "name", "start_date", "end_date", "status").execute()
+    sprints_response = supabase.table("sprints").select("id", "name", "start_date", "end_date", "status", "goal").execute()
     sprints = sprints_response.data if sprints_response.data else []
     sprint_names = [s["name"] for s in sprints]
-    selected_sprint = st.selectbox("Sprint", ["All"] + sprint_names)
 
-    if st.button("Create New Sprint"):
+    # Use session_state for selected sprint
+    if "selected_sprint" not in st.session_state:
+        st.session_state.selected_sprint = "All"
+    selected_sprint = st.selectbox("Sprint", ["All"] + sprint_names, index=(["All"] + sprint_names).index(st.session_state.selected_sprint) if st.session_state.selected_sprint in ["All"] + sprint_names else 0, key="sprint_select")
+    st.session_state.selected_sprint = selected_sprint
+
+    # Create New Sprint
+    with st.expander("Create New Sprint"):
         with st.form("create_sprint_form", clear_on_submit=True):
             sprint_name = st.text_input("Sprint Name")
             start_date = st.date_input("Start Date")
             end_date = st.date_input("End Date")
+            goal = st.text_area("Goal (optional)")
             submitted = st.form_submit_button("Create Sprint")
             if submitted and sprint_name and start_date and end_date:
-                supabase.table("sprints").insert({
-                    "name": sprint_name,
-                    "start_date": start_date.isoformat(),
-                    "end_date": end_date.isoformat(),
-                    "status": "planned"
-                }).execute()
-                st.success("Sprint created!")
-                st.rerun()
+                try:
+                    result = supabase.table("sprints").insert({
+                        "name": sprint_name,
+                        "start_date": start_date.isoformat(),
+                        "end_date": end_date.isoformat(),
+                        "status": "planned",
+                        "goal": goal
+                    }).execute()
+                    st.success("Sprint created!")
+                    # Auto-select the new sprint
+                    st.session_state.selected_sprint = sprint_name
+                    st.experimental_rerun()
+                except Exception as e:
+                    st.error(f"Error creating sprint: {str(e)}")
+
+    # Manage Sprints Modal/Section
+    if "show_manage_sprints" not in st.session_state:
+        st.session_state.show_manage_sprints = False
+    if st.button("Manage Sprints"):
+        st.session_state.show_manage_sprints = True
+    if st.session_state.show_manage_sprints:
+        st.markdown("---")
+        st.subheader(":wrench: Manage Sprints")
+        sprint_df = pd.DataFrame(sprints)
+        if not sprint_df.empty:
+            sprint_df_display = sprint_df[["name", "start_date", "end_date", "status", "goal"]]
+            st.dataframe(sprint_df_display, use_container_width=True)
+            # Edit/Delete actions
+            for idx, row in sprint_df.iterrows():
+                with st.expander(f"Edit: {row['name']}"):
+                    with st.form(f"edit_sprint_form_{row['id']}", clear_on_submit=True):
+                        new_name = st.text_input("Sprint Name", value=row["name"])
+                        new_start = st.date_input("Start Date", value=pd.to_datetime(row["start_date"]).date())
+                        new_end = st.date_input("End Date", value=pd.to_datetime(row["end_date"]).date())
+                        new_status = st.selectbox("Status", ["planned", "active", "completed", "cancelled"], index=["planned", "active", "completed", "cancelled"].index(row["status"]))
+                        new_goal = st.text_area("Goal", value=row.get("goal", ""))
+                        save = st.form_submit_button("Save Changes")
+                        delete = st.form_submit_button("Delete Sprint")
+                        if save:
+                            try:
+                                supabase.table("sprints").update({
+                                    "name": new_name,
+                                    "start_date": new_start.isoformat(),
+                                    "end_date": new_end.isoformat(),
+                                    "status": new_status,
+                                    "goal": new_goal
+                                }).eq("id", row["id"]).execute()
+                                st.success("Sprint updated!")
+                                st.experimental_rerun()
+                            except Exception as e:
+                                st.error(f"Error updating sprint: {str(e)}")
+                        if delete:
+                            try:
+                                supabase.table("sprints").delete().eq("id", row["id"]).execute()
+                                st.success("Sprint deleted!")
+                                st.experimental_rerun()
+                            except Exception as e:
+                                st.error(f"Error deleting sprint: {str(e)}")
+        else:
+            st.info("No sprints found.")
+        if st.button("Close Sprint Manager"):
+            st.session_state.show_manage_sprints = False
+            st.experimental_rerun()
+
+# --- Sprint Details Card ---
+def show_sprint_details(selected_sprint_name, sprints):
+    if selected_sprint_name != "All":
+        sprint = next((s for s in sprints if s["name"] == selected_sprint_name), None)
+        if sprint:
+            st.markdown("---")
+            st.markdown(f"### :dart: Sprint Details: {sprint['name']}")
+            st.write(f"**Dates:** {sprint['start_date']} to {sprint['end_date']}")
+            st.write(f"**Status:** {sprint['status']}")
+            if sprint.get("goal"):
+                st.write(f"**Goal:** {sprint['goal']}")
+            # Optionally, add metrics here (points, velocity, etc.)
 
 st.title("Poppy Ideation")
 
 # --- Main Layout Sections ---
 def display_main_content():
+    show_sprint_details(st.session_state.selected_sprint, sprints)
     # Tabs for each status
     statuses = ["idea", "backlog", "in_progress", "done", "blocked"]
     status_labels = ["Idea", "Backlog", "In Progress", "Done", "Blocked"]
