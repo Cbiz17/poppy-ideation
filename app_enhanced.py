@@ -137,7 +137,7 @@ with st.sidebar:
                 st.write("DEBUG: 'Submit New Key Form' block was entered.") # Debug message
                 st.success(f"New key form submitted with: {st.session_state.get('captured_test_form_value', 'DEBUG: VALUE NOT CAPTURED')}")
         # --- End Test Form ---
-        st.stop()
+        # st.stop() # Temporarily commented out to allow full app rendering
 
     if current_sprint: 
         st.subheader("Sprint Metrics")
