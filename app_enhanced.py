@@ -126,31 +126,17 @@ with st.sidebar:
     else:
         st.info("No sprints found. You can create one.")
         
-        # Restore the "Create First Sprint" form with a robust structure
-        with st.form("initial_new_sprint_form_v2", clear_on_submit=True): # Using a new key for freshness
-            st.subheader("Create First Sprint")
-            sprint_name_input = st.text_input("Sprint Name", key="init_sprint_form_name_v2")
-            start_date_input = st.date_input("Start Date", key="init_sprint_form_start_date_v2")
-            end_date_input = st.date_input("End Date", key="init_sprint_form_end_date_v2")
+        # --- Slightly Enhanced Test Form ---
+        with st.form("slightly_enhanced_test_form", clear_on_submit=True):
+            st.subheader("Create First Sprint") # Added subheader
+            sprint_name_input = st.text_input("Sprint Name", key="init_sprint_form_name_v2") # Added one text input
             
-            submitted_init_sprint = st.form_submit_button("Create Sprint", key="init_sprint_form_submit_v2")
+            submitted_test_sprint = st.form_submit_button("Test Create Sprint", key="test_sprint_submit")
             
-            if submitted_init_sprint:
-                if sprint_name_input and start_date_input and end_date_input:
-                    try:
-                        supabase.table("sprints").insert({
-                            "name": sprint_name_input,
-                            "start_date": start_date_input.isoformat(),
-                            "end_date": end_date_input.isoformat(),
-                            "status": "planned"
-                        }).execute()
-                        st.success("First sprint created!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error creating sprint: {str(e)}")
-                else:
-                    st.warning("Please fill in all fields for the sprint.")
-        # --- End of restored Create First Sprint form ---
+            if submitted_test_sprint:
+                st.success(f"Test form submitted with name: {sprint_name_input}")
+                # No database interaction yet
+        # --- End Slightly Enhanced Test Form ---
 
     if current_sprint: 
         st.subheader("Sprint Metrics")
