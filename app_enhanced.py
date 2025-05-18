@@ -126,17 +126,16 @@ with st.sidebar:
     else:
         st.info("No sprints found. You can create one.")
         
-        # --- Slightly Enhanced Test Form ---
-        with st.form("slightly_enhanced_test_form", clear_on_submit=True):
-            st.subheader("Create First Sprint") # Added subheader
-            sprint_name_input = st.text_input("Sprint Name", key="init_sprint_form_name_v2") # Added one text input
+        # --- Test Form: Only text_input and submit button ---
+        with st.form("text_input_only_test_form", clear_on_submit=True):
+            # st.subheader("Create First Sprint") # Subheader removed for this test
+            sprint_name_input = st.text_input("Sprint Name", key="init_sprint_form_name_v2") # Using the same key as before
             
-            submitted_test_sprint = st.form_submit_button("Test Create Sprint", key="test_sprint_submit")
+            submitted_test_sprint = st.form_submit_button("Test Submit Name", key="test_sprint_name_submit")
             
             if submitted_test_sprint:
                 st.success(f"Test form submitted with name: {sprint_name_input}")
-                # No database interaction yet
-        # --- End Slightly Enhanced Test Form ---
+        # --- End Test Form ---
 
     if current_sprint: 
         st.subheader("Sprint Metrics")
