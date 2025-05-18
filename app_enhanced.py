@@ -133,7 +133,9 @@ with st.sidebar:
             submitted_new_key_form = st.form_submit_button("Submit New Key Form")
             
             if submitted_new_key_form:
-                st.success(f"New key form submitted with: {some_text_input}")
+                st.session_state.captured_test_form_value = some_text_input
+                st.write("DEBUG: 'Submit New Key Form' block was entered.") # Debug message
+                st.success(f"New key form submitted with: {st.session_state.get('captured_test_form_value', 'DEBUG: VALUE NOT CAPTURED')}")
         # --- End Test Form ---
         st.stop()
 
