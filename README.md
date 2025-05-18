@@ -1,6 +1,6 @@
 # Poppy Ideation
 
-A collaborative idea management platform built with Streamlit and Supabase, featuring AI-powered ranking and management capabilities.
+A collaborative idea management platform built with Streamlit and Supabase, featuring AI-powered ranking and sprint management capabilities.
 
 ## Setup
 
@@ -30,17 +30,17 @@ A collaborative idea management platform built with Streamlit and Supabase, feat
   - View and edit idea rankings
   - Delete ideas
   - Promote ideas to "In Progress" status
+  - AI-powered ranking system
 
-- **AI Integration**
-  - AI-powered ranking system that evaluates ideas based on multiple factors
-  - Automatic ranking of new ideas upon creation
-  - Manual re-ranking capability using AI
-  - Rank scores from 1-100 based on idea quality and potential
+- **Sprint Management**
+  - Track sprint status (active, upcoming, completed)
+  - View sprint metrics (points, velocity)
+  - Manage sprint backlog items
+  - Track sprint progress
 
 - **User Interface**
-  - Clean, single-table view of all ideas
+  - Clean, intuitive interface for managing ideas and sprints
   - Real-time filtering by status, priority, and category
-  - Drag-and-drop rank reordering
   - Checkbox selection for bulk actions
   - Responsive design for all screen sizes
 
@@ -64,7 +64,16 @@ A collaborative idea management platform built with Streamlit and Supabase, feat
   - Priority levels
   - Category system
   - Tagging system with many-to-many relationships
+  - Sprint management tables
   - Timestamp tracking
+
+## Current Development Status
+
+The application is actively being developed with ongoing improvements to the sprint management system and idea ranking functionality. The current focus is on:
+- Sprint metrics tracking
+- Idea status management
+- Bulk action capabilities
+- UI/UX enhancements
 
 ## Deployment
 
