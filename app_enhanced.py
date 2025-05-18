@@ -29,9 +29,12 @@ st.success("Streamlit is up and running!")
 
 # --- Helper function to get name lookups
 def get_lookup(table_name):
+    items = supabase.table(table_name).select("id", "name").execute().data
+    if table_name == "statuses":
+        items = [s for s in items if s["name"] != "blocked"]
     return {
         item['id']: item['name']
-        for item in supabase.table(table_name).select("id, name").execute().data
+        for item in items
     }
 
 category_lookup = get_lookup("categories")
