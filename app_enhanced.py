@@ -272,9 +272,10 @@ with st.container():
                         "Category",
                         help="The category of the idea"
                     ),
-                    'Created At': st.column_config.DatetimeColumn(
+                    'Created At': st.column_config.TextColumn(
                         "Created At",
-                        help="When the idea was created"
+                        help="When the idea was created",
+                        disabled=True
                     )
                 }
             )
