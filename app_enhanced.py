@@ -167,8 +167,8 @@ with st.container():
             hide_index=True,
             column_config={
                 "Select": st.column_config.CheckboxColumn(
-                    "Select for Deletion",
-                    help="Select ideas to delete",
+                    "Select",
+                    help="Select ideas to manage",
                     default=False,
                 ),
                 "Rank": st.column_config.NumberColumn(
@@ -200,54 +200,86 @@ with st.container():
             except Exception as e:
                 st.error(f"Error updating ranks: {str(e)}")
         
-        # Buttons for management actions
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button("Delete Selected Ideas"):
-                if len(selected_ideas) == 0:
-                    st.warning("Please select at least one idea to delete!")
-                else:
-                    try:
-                        # Get the actual ideas from the database using their titles
-                        for _, row in selected_ideas.iterrows():
-                            idea = next(
-                                (i for i in all_ideas if i['title'] == row['Title']),
-                                None
-                            )
-                            if idea:
-                                # Delete idea_tags first (due to foreign key constraint)
-                                supabase.table("idea_tags").delete().eq("idea_id", idea['id']).execute()
-                                # Then delete the idea
-                                supabase.table("poppy_ideas_v2").delete().eq("id", idea['id']).execute()
-                        st.success("Selected ideas have been deleted!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error deleting ideas: {str(e)}")
-        
-        with col2:
-            if st.button("Promote Selected Ideas"):
-                if len(selected_ideas) == 0:
-                    st.warning("Please select at least one idea to promote!")
-                else:
-                    try:
-                        # Update the status of selected ideas to "In Progress"
-                        for _, row in selected_ideas.iterrows():
-                            idea = next(
-                                (i for i in all_ideas if i['title'] == row['Title']),
-                                None
-                            )
-                            if idea:
-                                # Get the status ID for "In Progress"
-                                status_id = next(
-                                    s['id'] for s in status_options if s['name'] == 'In Progress'
+        # Create a clean management section
+        with st.container():
+            st.markdown("---")
+            st.subheader("Manage Ideas")
+            
+            # Use columns for better layout
+            col1, col2 = st.columns([1, 1])
+            
+            # Add some padding
+            with col1:
+                st.markdown("""
+                <style>
+                .stButton > button {
+                    background-color: #dc3545;
+                    color: white;
+                    width: 100%;
+                    padding: 10px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                if st.button("Delete Selected Ideas"):
+                    if len(selected_ideas) == 0:
+                        st.warning("Please select at least one idea to delete!")
+                    else:
+                        try:
+                            # Get the actual ideas from the database using their titles
+                            for _, row in selected_ideas.iterrows():
+                                idea = next(
+                                    (i for i in all_ideas if i['title'] == row['Title']),
+                                    None
                                 )
-                                # Update the idea's status
-                                supabase.table("poppy_ideas_v2").update({"status_id": status_id}).eq("id", idea['id']).execute()
-                        st.success("Selected ideas have been promoted!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error promoting ideas: {str(e)}")
+                                if idea:
+                                    # Delete idea_tags first (due to foreign key constraint)
+                                    supabase.table("idea_tags").delete().eq("idea_id", idea['id']).execute()
+                                    # Then delete the idea
+                                    supabase.table("poppy_ideas_v2").delete().eq("id", idea['id']).execute()
+                            st.success("Selected ideas have been deleted!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error deleting ideas: {str(e)}")
+            
+            with col2:
+                st.markdown("""
+                <style>
+                .stButton > button {
+                    background-color: #28a745;
+                    color: white;
+                    width: 100%;
+                    padding: 10px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                if st.button("Promote Selected Ideas"):
+                    if len(selected_ideas) == 0:
+                        st.warning("Please select at least one idea to promote!")
+                    else:
+                        try:
+                            # Update the status of selected ideas to "In Progress"
+                            for _, row in selected_ideas.iterrows():
+                                idea = next(
+                                    (i for i in all_ideas if i['title'] == row['Title']),
+                                    None
+                                )
+                                if idea:
+                                    # Get the status ID for "In Progress"
+                                    status_id = next(
+                                        s['id'] for s in status_options if s['name'] == 'In Progress'
+                                    )
+                                    # Update the idea's status
+                                    supabase.table("poppy_ideas_v2").update({"status_id": status_id}).eq("id", idea['id']).execute()
+                            st.success("Selected ideas have been promoted!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error promoting ideas: {str(e)}")
     else:
         st.info("No ideas saved yet.")
 
