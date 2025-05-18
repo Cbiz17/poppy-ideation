@@ -36,6 +36,10 @@ def get_ai_ranking_score(idea):
         Provide only a number between 1 and 100.
         """
         
+        # Debug log
+        print(f"Getting AI ranking for idea: {idea['title']}")
+        print(f"Prompt: {prompt}")
+        
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -47,13 +51,17 @@ def get_ai_ranking_score(idea):
         )
         
         score = response.choices[0].message.content.strip()
+        print(f"AI response: {score}")  # Debug log
+        
         # Ensure we get a valid number
         try:
             score = int(score)
+            print(f"Parsed score: {score}")  # Debug log
             if 1 <= score <= 100:
                 return score
             return 50  # Default score if out of range
         except:
+            print(f"Error parsing score: {score}")  # Debug log
             return 50  # Default score if not a number
             
     except Exception as e:
