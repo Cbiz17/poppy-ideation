@@ -192,9 +192,9 @@ with st.container():
     # Add a separator
     st.markdown("---")
 
-# Display filtered ideas based on sidebar
+# Ideas section
 with st.container():
-    st.header("🔍 Filtered Ideas")
+    st.header("💡 Ideas")
     
     # Apply filters from sidebar
     query = supabase.table("poppy_ideas_v2").select("*")
@@ -207,36 +207,10 @@ with st.container():
     if selected_category_id:
         query = query.eq("category_id", selected_category_id)
     
-    filtered_ideas_response = query.execute()
-    filtered_ideas = filtered_ideas_response.data
+    # Order by rank descending
+    query = query.order("rank", desc=True)
     
-    if filtered_ideas:
-        # Create a DataFrame for display
-        df = pd.DataFrame(filtered_ideas)
-        
-        # Format the DataFrame
-        formatted_filtered = df[['title', 'description', 'rank', 'status_id', 'priority_id', 'category_id', 'created_at']].copy()
-        formatted_filtered.columns = ['Title', 'Description', 'Rank', 'Status', 'Priority', 'Category', 'Created At']
-        
-        # Replace IDs with names
-        formatted_filtered['Status'] = formatted_filtered['Status'].map(status_lookup)
-        formatted_filtered['Priority'] = formatted_filtered['Priority'].map(priority_lookup)
-        formatted_filtered['Category'] = formatted_filtered['Category'].map(category_lookup)
-        
-        # Display the filtered ideas
-        st.dataframe(formatted_filtered)
-    else:
-        st.info("No ideas match your filters!")
-
-    # Add a separator
-    st.markdown("---")
-
-# Saved Ideas section
-with st.container():
-    st.header("📁 Saved Ideas")
-    
-    # Get all ideas with their rank and sort by rank descending
-    ideas_response = supabase.table("poppy_ideas_v2").select("*").order("rank", desc=True).execute()
+    ideas_response = query.execute()
     ideas = ideas_response.data
     
     if ideas:
@@ -252,12 +226,11 @@ with st.container():
         formatted_ideas['Priority'] = formatted_ideas['Priority'].map(priority_lookup)
         formatted_ideas['Category'] = formatted_ideas['Category'].map(category_lookup)
         
-        # Display the ideas in a simple table
+        # Display the ideas
         st.dataframe(formatted_ideas)
         
-        # Create a container for management buttons
+        # Add management buttons
         with st.container():
-            # Add management buttons
             col1, col2, col3 = st.columns(3)
             
             with col1:
