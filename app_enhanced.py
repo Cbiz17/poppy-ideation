@@ -126,15 +126,14 @@ with st.sidebar:
     else:
         st.info("No sprints found. You can create one.")
         
-        # --- Test Form: Only text_input and submit button ---
-        with st.form("text_input_only_test_form", clear_on_submit=True):
-            # st.subheader("Create First Sprint") # Subheader removed for this test
-            sprint_name_input = st.text_input("Sprint Name", key="init_sprint_form_name_v2") # Using the same key as before
+        # --- Test Form: text_input (with NEW key) and submit button ---
+        with st.form("completely_new_key_form", clear_on_submit=True):
+            some_text_input = st.text_input("A New Label", key="a_brand_new_text_input_key") # BRAND NEW KEY
             
-            submitted_test_sprint = st.form_submit_button("Test Submit Name", key="test_sprint_name_submit")
+            submitted_new_key_form = st.form_submit_button("Submit New Key Form", key="new_key_form_submit_button")
             
-            if submitted_test_sprint:
-                st.success(f"Test form submitted with name: {sprint_name_input}")
+            if submitted_new_key_form:
+                st.success(f"New key form submitted with: {some_text_input}")
         # --- End Test Form ---
 
     if current_sprint: 
