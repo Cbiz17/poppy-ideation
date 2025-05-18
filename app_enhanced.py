@@ -1,6 +1,3 @@
-# --- Page config
-st.set_page_config(page_title="Poppy Ideation", layout="wide")
-
 import streamlit as st
 from supabase import create_client, Client
 from datetime import datetime
@@ -8,6 +5,9 @@ import os
 import uuid
 import pandas as pd
 import openai
+
+# --- Page config
+st.set_page_config(page_title="Poppy Ideation", layout="wide")
 
 # Initialize OpenAI
 openai.api_key = st.secrets.get("OPENAI_API_KEY", "NOT_FOUND")
