@@ -6,6 +6,10 @@ import uuid
 import pandas as pd
 import openai
 from dotenv import load_dotenv
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import SupabaseVectorStore
+from integration_debugger import patch_supabase_client, show_integration_log, _log_lock, _integration_log
+import time
 
 # --- Load .env for local development ---
 load_dotenv()
@@ -88,6 +92,7 @@ try:
         st.error("Could not find Supabase credentials in secrets or .env")
         st.stop()
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    patch_supabase_client(supabase)
 except Exception as e:
     st.error(f"Error loading secrets: {str(e)}")
     st.stop()
@@ -201,7 +206,7 @@ with st.sidebar:
                     st.success("Sprint created!")
                     # Auto-select the new sprint
                     st.session_state.selected_sprint = sprint_name
-                    st.experimental_rerun()
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Error creating sprint: {str(e)}")
 
@@ -238,21 +243,21 @@ with st.sidebar:
                                     "goal": new_goal
                                 }).eq("id", row["id"]).execute()
                                 st.success("Sprint updated!")
-                                st.experimental_rerun()
+                                st.rerun()
                             except Exception as e:
                                 st.error(f"Error updating sprint: {str(e)}")
                         if delete:
                             try:
                                 supabase.table("sprints").delete().eq("id", row["id"]).execute()
                                 st.success("Sprint deleted!")
-                                st.experimental_rerun()
+                                st.rerun()
                             except Exception as e:
                                 st.error(f"Error deleting sprint: {str(e)}")
         else:
             st.info("No sprints found.")
         if st.button("Close Sprint Manager"):
             st.session_state.show_manage_sprints = False
-            st.experimental_rerun()
+            st.rerun()
 
     # --- AI/RAG Secrets Check ---
     VECTOR_DB_API_KEY = st.secrets.get("VECTOR_DB_API_KEY", None)  # Placeholder for RAG/vector DB
@@ -270,6 +275,25 @@ with st.sidebar:
         st.stop()
     openai.api_key = OPENAI_API_KEY
     # --- End AI/RAG Secrets Check ---
+
+    show_integration_log()
+
+# --- RAG Q&A Setup ---
+def get_vectorstore(supabase_url, supabase_key, openai_api_key):
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    client = create_client(supabase_url, supabase_key)
+    return SupabaseVectorStore(
+        client=client,
+        embedding=embeddings,
+        table_name="idea_embeddings",  # You may need to create this table in Supabase
+    )
+
+def ensure_idea_embeddings(vectorstore, ideas):
+    # Check if embeddings exist for all ideas, add if missing
+    ids = [str(idea["id"]) for idea in ideas]
+    texts = [f"{idea['title']}. {idea['description']}" for idea in ideas]
+    # This will upsert embeddings for all ideas
+    vectorstore.add_texts(texts, ids=ids)
 
 # --- Sprint Details Card ---
 def show_sprint_details(selected_sprint_name, sprints):
@@ -289,6 +313,50 @@ st.title("Poppy Ideation")
 # --- Main Layout Sections ---
 def display_main_content():
     show_sprint_details(st.session_state.selected_sprint, sprints)
+    # AI Chat (RAG Q&A)
+    st.markdown("---")
+    st.subheader(":mag: AI Chat (Ask about your ideas)")
+    if "ai_chat_history" not in st.session_state:
+        st.session_state.ai_chat_history = []  # List of (user, ai) tuples
+    with st.form("ai_chat_form", clear_on_submit=True):
+        ai_query = st.text_input("Ask AI about your ideas (e.g., 'What are the top engineering priorities?')", key="ai_search_box")
+        send = st.form_submit_button("Send")
+    ai_answer = None
+    if send and ai_query.strip():
+        with st.spinner("Thinking..."):
+            try:
+                # Fetch all ideas for embedding
+                all_ideas = supabase.table("items").select("id", "title", "description").execute().data or []
+                vectorstore = get_vectorstore(SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY)
+                ensure_idea_embeddings(vectorstore, all_ideas)
+                # Embed query and retrieve top 5 relevant ideas
+                with _log_lock:
+                    _integration_log.append((time.time(), 'QUERY', f"VectorStore.similarity_search: {ai_query}"))
+                docs = vectorstore.similarity_search(ai_query, k=5)
+                relevant_ideas = [doc.page_content for doc in docs]
+                # Compose prompt for LLM
+                context = "\n".join(relevant_ideas)
+                prompt = f"""
+                You are an expert product manager. Given the following ideas:
+                {context}
+                Answer the user's question: {ai_query}
+                """
+                llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, temperature=0.2)
+                ai_answer = llm.invoke(prompt).content
+            except Exception as e:
+                with _log_lock:
+                    _integration_log.append((time.time(), 'ERROR', f"RAG/AI block: {str(e)}"))
+                st.error(f"AI/RAG error: {str(e)}")
+                ai_answer = None
+        # Add to chat history
+        st.session_state.ai_chat_history.append((ai_query, ai_answer))
+        # Clear input after send, only rerun if no error
+        if ai_answer is not None:
+            st.rerun()
+    # Display chat history
+    for user_msg, ai_msg in st.session_state.ai_chat_history:
+        st.markdown(f"<div style='margin-bottom:0.5em;'><b>You:</b> {user_msg}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#E9ECEF;padding:1em;border-radius:10px;margin-bottom:1.5em;'><b>AI:</b> {ai_msg}</div>", unsafe_allow_html=True)
     # Tabs for each status
     statuses = ["idea", "backlog", "in_progress", "done", "blocked"]
     status_labels = ["Idea", "Backlog", "In Progress", "Done", "Blocked"]
@@ -387,6 +455,8 @@ def display_main_content():
                     # AI Re-ranking button
                     if st.button("Re-Rank All Items with AI (Not Implemented)", key=f"re_rank_items_button_{status}"):
                         st.info("AI Re-ranking feature placeholder.")
+                else:
+                    st.info("No items found based on current filters!")
             else:
                 st.info("No items found based on current filters!")
 

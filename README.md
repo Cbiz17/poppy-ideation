@@ -117,3 +117,15 @@ To enable AI-powered features (like idea re-ranking, summarization, or retrieval
 ## License
 
 (To be added: Specify the license under which this project is shared. For example, MIT, Apache 2.0, etc. Consider creating a `LICENSE.md` file.)
+
+from supabase import create_client
+from langchain_community.vectorstores import SupabaseVectorStore
+
+def get_vectorstore(supabase_url, supabase_key, openai_api_key):
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    client = create_client(supabase_url, supabase_key)
+    return SupabaseVectorStore(
+        client=client,
+        embedding=embeddings,
+        table_name="idea_embeddings",  # You may need to create this table in Supabase
+    )
