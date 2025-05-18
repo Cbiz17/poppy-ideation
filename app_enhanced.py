@@ -5,6 +5,10 @@ import os
 import uuid
 import pandas as pd
 import openai
+from dotenv import load_dotenv
+
+# --- Load .env for local development ---
+load_dotenv()
 
 # --- Page config
 st.set_page_config(page_title="Poppy Ideation", layout="wide")
@@ -74,16 +78,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- Initialize Supabase client
+# --- Initialize Supabase client and OpenAI key with fallback to .env ---
 try:
-    # Get secrets
-    SUPABASE_URL = st.secrets.get("SUPABASE_URL", "NOT_FOUND")
-    SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "NOT_FOUND")
-    
+    # Prefer Streamlit secrets, fallback to environment variables
+    SUPABASE_URL = st.secrets.get("SUPABASE_URL", os.environ.get("SUPABASE_URL", "NOT_FOUND"))
+    SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", os.environ.get("SUPABASE_KEY", "NOT_FOUND"))
+    OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", None))
     if SUPABASE_URL == "NOT_FOUND" or SUPABASE_KEY == "NOT_FOUND":
-        st.error("Could not find Supabase credentials in secrets")
+        st.error("Could not find Supabase credentials in secrets or .env")
         st.stop()
-    
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
     st.error(f"Error loading secrets: {str(e)}")
@@ -252,23 +255,17 @@ with st.sidebar:
             st.experimental_rerun()
 
     # --- AI/RAG Secrets Check ---
-    OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", None)
     VECTOR_DB_API_KEY = st.secrets.get("VECTOR_DB_API_KEY", None)  # Placeholder for RAG/vector DB
-    ai_enabled = bool(OPENAI_API_KEY)
     rag_enabled = bool(VECTOR_DB_API_KEY)
 
     # Show badge/message in sidebar
-    if ai_enabled:
-        st.success("\U0001F916 AI features enabled")
-    else:
-        st.warning("\U0001F916 AI features disabled (add OpenAI key)")
     if rag_enabled:
         st.info("\U0001F4D6 RAG enabled")
     else:
         st.info("\U0001F4D6 RAG not configured")
 
     # Stop app if OpenAI key is required for core features
-    if not ai_enabled:
+    if not OPENAI_API_KEY:
         st.error("OpenAI API key not found in secrets. Please add it to use AI features.")
         st.stop()
     openai.api_key = OPENAI_API_KEY
