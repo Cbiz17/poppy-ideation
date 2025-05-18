@@ -7,20 +7,24 @@ import pandas as pd
 
 # --- Initialize Supabase client
 try:
-    # First try to load from Streamlit secrets
-    SUPABASE_URL = st.secrets.get("SUPABASE_URL")
-    SUPABASE_KEY = st.secrets.get("SUPABASE_KEY")
+    # Check if secrets exist
+    st.write("Checking secrets...")
+    st.write(f"Secrets object: {st.secrets}")
+    st.write(f"Available secrets: {list(st.secrets.keys())}")
     
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        # If not found in secrets, try to load from environment variables
-        SUPABASE_URL = os.getenv("SUPABASE_URL")
-        SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-        
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        st.error("Could not find Supabase credentials")
+    # Try to get secrets
+    SUPABASE_URL = st.secrets.get("SUPABASE_URL", "NOT_FOUND")
+    SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "NOT_FOUND")
+    
+    st.write(f"\nLoaded secrets:")
+    st.write(f"URL: {SUPABASE_URL}")
+    st.write(f"Key: {SUPABASE_KEY}")
+    
+    if SUPABASE_URL == "NOT_FOUND" or SUPABASE_KEY == "NOT_FOUND":
+        st.error("Could not find Supabase credentials in secrets")
         st.stop()
         
-    st.write(f"Using URL: {SUPABASE_URL}")
+    st.write(f"\nUsing URL: {SUPABASE_URL}")
     st.write(f"Key loaded: {'yes' if SUPABASE_KEY else 'no'}")
     
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
