@@ -205,15 +205,8 @@ with st.container():
         df['Select'] = False  # Add a selection column
         
         # Format the DataFrame for display
-        formatted_ideas = df[{
-            'title': 'Title',
-            'description': 'Description',
-            'rank': 'Rank',
-            'status_id': 'Status',
-            'priority_id': 'Priority',
-            'category_id': 'Category',
-            'created_at': 'Created At'
-        }]
+        formatted_ideas = df[['title', 'description', 'rank', 'status_id', 'priority_id', 'category_id', 'created_at']].copy()
+        formatted_ideas.columns = ['Title', 'Description', 'Rank', 'Status', 'Priority', 'Category', 'Created At']
         
         # Replace IDs with names
         formatted_ideas['Status'] = formatted_ideas['Status'].map(status_lookup)
