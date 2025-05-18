@@ -230,12 +230,65 @@ with st.container():
             formatted_ideas['Priority'] = formatted_ideas['Priority'].map(priority_lookup)
             formatted_ideas['Category'] = formatted_ideas['Category'].map(category_lookup)
             
-            # Display the ideas with a checkbox for selection
-            st.dataframe(
+            # Add a column for selection
+            formatted_ideas['Select'] = False
+            
+            # Configure the data editor
+            edited_df = st.data_editor(
                 formatted_ideas,
                 hide_index=True,
-                use_container_width=True
+                use_container_width=True,
+                column_config={
+                    'Select': st.column_config.CheckboxColumn(
+                        "Select",
+                        help="Select ideas to manage",
+                        default=False
+                    ),
+                    'Rank': st.column_config.NumberColumn(
+                        "Rank",
+                        help="Drag to reorder ideas",
+                        min_value=0,
+                        max_value=100,
+                        step=1,
+                        format="%d"
+                    ),
+                    'Title': st.column_config.TextColumn(
+                        "Title",
+                        help="The title of the idea"
+                    ),
+                    'Description': st.column_config.TextColumn(
+                        "Description",
+                        help="The description of the idea"
+                    ),
+                    'Status': st.column_config.TextColumn(
+                        "Status",
+                        help="The current status of the idea"
+                    ),
+                    'Priority': st.column_config.TextColumn(
+                        "Priority",
+                        help="The priority level of the idea"
+                    ),
+                    'Category': st.column_config.TextColumn(
+                        "Category",
+                        help="The category of the idea"
+                    ),
+                    'Created At': st.column_config.DatetimeColumn(
+                        "Created At",
+                        help="When the idea was created"
+                    )
+                }
             )
+            
+            # Handle changes to the DataFrame
+            if not edited_df.equals(formatted_ideas):
+                try:
+                    # Update the database with any changes
+                    for index, row in edited_df.iterrows():
+                        if row['Rank'] != formatted_ideas.loc[index, 'Rank']:
+                            supabase.table("poppy_ideas_v2").update({"rank": row['Rank']}).eq("id", ideas[index]['id']).execute()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error updating rankings: {str(e)}")
             
             # Add management buttons
             with st.container():
@@ -245,11 +298,11 @@ with st.container():
                     if st.button("Delete Selected Ideas", key="delete_button"):
                         try:
                             # Get selected ideas
-                            selected_ideas = st.session_state.get('selected_ideas', [])
-                            if selected_ideas:
+                            selected_ideas = edited_df[edited_df['Select']].index
+                            if len(selected_ideas) > 0:
                                 # Delete each selected idea
-                                for idea_id in selected_ideas:
-                                    supabase.table("poppy_ideas_v2").delete().eq("id", idea_id).execute()
+                                for idx in selected_ideas:
+                                    supabase.table("poppy_ideas_v2").delete().eq("id", ideas[idx]['id']).execute()
                                 st.success("Selected ideas deleted successfully!")
                                 st.rerun()
                             else:
@@ -261,12 +314,12 @@ with st.container():
                     if st.button("Promote Selected Ideas", key="promote_button"):
                         try:
                             # Get selected ideas
-                            selected_ideas = st.session_state.get('selected_ideas', [])
-                            if selected_ideas:
+                            selected_ideas = edited_df[edited_df['Select']].index
+                            if len(selected_ideas) > 0:
                                 # Promote each selected idea to "In Progress"
                                 in_progress_id = next(s['id'] for s in status_options if s['name'] == "In Progress")
-                                for idea_id in selected_ideas:
-                                    supabase.table("poppy_ideas_v2").update({"status_id": in_progress_id}).eq("id", idea_id).execute()
+                                for idx in selected_ideas:
+                                    supabase.table("poppy_ideas_v2").update({"status_id": in_progress_id}).eq("id", ideas[idx]['id']).execute()
                                 st.success("Selected ideas promoted to In Progress!")
                                 st.rerun()
                             else:
@@ -297,9 +350,6 @@ with st.container():
             
     except Exception as e:
         st.error(f"Error fetching ideas: {str(e)}")
-
-    # Format ideas
-    formatted_ideas = []
     for idea in ideas:
         formatted_ideas.append({
             "Title": idea["title"],
