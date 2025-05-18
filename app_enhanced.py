@@ -122,8 +122,6 @@ with st.sidebar:
     selected_category_id = next(c["id"] for c in category_options if c["name"] == selected_category)
 
 # --- Main Layout
-st.write("---")
-
 # Create new idea section
 with st.container():
     with st.form("new_idea", clear_on_submit=True):
@@ -191,9 +189,50 @@ with st.container():
                 except Exception as e:
                     st.error(f"Error creating idea: {str(e)}")
 
+    # Add a separator
     st.markdown("---")
 
-    # Saved Ideas
+# Display filtered ideas based on sidebar
+with st.container():
+    st.header("🔍 Filtered Ideas")
+    
+    # Apply filters from sidebar
+    query = supabase.table("poppy_ideas_v2").select("*")
+    
+    # Apply filters
+    if selected_status_id:
+        query = query.eq("status_id", selected_status_id)
+    if selected_priority_id:
+        query = query.eq("priority_id", selected_priority_id)
+    if selected_category_id:
+        query = query.eq("category_id", selected_category_id)
+    
+    filtered_ideas_response = query.execute()
+    filtered_ideas = filtered_ideas_response.data
+    
+    if filtered_ideas:
+        # Create a DataFrame for display
+        df = pd.DataFrame(filtered_ideas)
+        
+        # Format the DataFrame
+        formatted_filtered = df[['title', 'description', 'rank', 'status_id', 'priority_id', 'category_id', 'created_at']].copy()
+        formatted_filtered.columns = ['Title', 'Description', 'Rank', 'Status', 'Priority', 'Category', 'Created At']
+        
+        # Replace IDs with names
+        formatted_filtered['Status'] = formatted_filtered['Status'].map(status_lookup)
+        formatted_filtered['Priority'] = formatted_filtered['Priority'].map(priority_lookup)
+        formatted_filtered['Category'] = formatted_filtered['Category'].map(category_lookup)
+        
+        # Display the filtered ideas
+        st.dataframe(formatted_filtered)
+    else:
+        st.info("No ideas match your filters!")
+
+    # Add a separator
+    st.markdown("---")
+
+# Saved Ideas section
+with st.container():
     st.header("📁 Saved Ideas")
     
     # Get all ideas with their rank and sort by rank descending
@@ -216,7 +255,7 @@ with st.container():
         # Display the ideas in a simple table
         st.dataframe(formatted_ideas)
         
-        # Create a container for buttons to avoid duplicates
+        # Create a container for management buttons
         with st.container():
             # Add management buttons
             col1, col2, col3 = st.columns(3)
