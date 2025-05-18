@@ -1,3 +1,6 @@
+# --- Page config
+st.set_page_config(page_title="Poppy Ideation", layout="wide")
+
 import streamlit as st
 from supabase import create_client, Client
 from datetime import datetime
@@ -57,14 +60,20 @@ def get_ai_ranking_score(idea):
         print(f"Error getting AI ranking: {str(e)}")
         return 50  # Default score on error
 
-# --- Page config
-st.set_page_config(page_title="Poppy Ideation", layout="wide")
-
-# --- Page config
-st.set_page_config(page_title="Poppy Ideation", layout="wide")
-
 # --- Initialize Supabase client
 try:
+    # Get secrets
+    SUPABASE_URL = st.secrets.get("SUPABASE_URL", "NOT_FOUND")
+    SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "NOT_FOUND")
+    
+    if SUPABASE_URL == "NOT_FOUND" or SUPABASE_KEY == "NOT_FOUND":
+        st.error("Could not find Supabase credentials in secrets")
+        st.stop()
+    
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    st.error(f"Error loading secrets: {str(e)}")
+    st.stop()
     # Get secrets
     SUPABASE_URL = st.secrets.get("SUPABASE_URL", "NOT_FOUND")
     SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "NOT_FOUND")
