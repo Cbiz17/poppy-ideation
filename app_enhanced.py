@@ -13,76 +13,45 @@ st.set_page_config(page_title="Poppy Ideation", layout="wide")
 openai.api_key = st.secrets.get("OPENAI_API_KEY", "NOT_FOUND")
 
 # Function to get AI ranking score
-def get_ai_ranking_score(idea):
+# Function to calculate priority score based on due date and priority
+# Higher score = higher priority
+# Score is calculated as: (priority_weight * priority_value) + (date_weight * days_until_due)
+def calculate_priority_score(idea):
     """
-    Get an AI-assisted ranking score for an idea based on multiple factors
+    Calculate priority score based on due date and priority level
     """
     try:
-        # Combine relevant fields into a prompt
-        prompt = f"""
-        Evaluate this idea and provide a ranking score from 1-100:
-        Title: {idea['title']}
-        Description: {idea['description']}
-        Context: {idea['context']}
-        Source: {idea['source']}
+        # Priority weights (can be adjusted)
+        priority_weights = {
+            'Low': 1,
+            'Medium': 2,
+            'High': 3,
+            'Urgent': 4
+        }
         
-        Consider the following factors:
-        1. Innovation potential
-        2. Feasibility
-        3. Impact potential
-        4. Strategic alignment
-        5. Resource requirements
+        # Date weight
+        date_weight = 1.0
         
-        Provide only a number between 1 and 100.
-        """
+        # Get priority value
+        priority_value = priority_weights.get(idea['priority_name'], 1)
         
-        # Debug log
-        print(f"Getting AI ranking for idea: {idea['title']}")
-        print(f"Prompt: {prompt}")
-        
-        # Set a timeout for the API call
-        timeout = 10  # 10 seconds
-        
-        try:
-            # Make the API call with timeout
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are an expert in idea evaluation and ranking."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=10,
-                timeout=timeout
-            )
+        # Calculate days until due
+        if idea.get('due_date'):
+            due_date = datetime.strptime(idea['due_date'], '%Y-%m-%d').date()
+            today = datetime.now().date()
+            days_until_due = (due_date - today).days
             
-            score = response.choices[0].message.content.strip()
-            print(f"AI response: {score}")  # Debug log
-            
-            # Ensure we get a valid number
-            try:
-                score = int(score)
-                print(f"Parsed score: {score}")  # Debug log
-                if 1 <= score <= 100:
-                    return score
-                return 50  # Default score if out of range
-            except:
-                print(f"Error parsing score: {score}")  # Debug log
-                return 50  # Default score if not a number
-                
-        except openai.error.Timeout as e:
-            print(f"OpenAI API timeout after {timeout} seconds")
-            return 50  # Return default score on timeout
-        except openai.error.APIError as e:
-            print(f"OpenAI API error: {str(e)}")
-            return 50  # Return default score on API error
-        except Exception as e:
-            print(f"Error in API call: {str(e)}")
-            return 50  # Return default score on any other error
-            
+            # Convert days to score (closer due dates = higher score)
+            date_score = max(0, 100 - min(days_until_due * date_weight, 100))
+        else:
+            date_score = 0
+        
+        # Calculate final score
+        score = (priority_value * 25) + date_score
+        return min(max(0, score), 100)  # Clamp between 0 and 100
     except Exception as e:
-        print(f"Error getting AI ranking: {str(e)}")
-        return 50  # Default score on error
+        print(f"Error calculating priority score: {str(e)}")
+        return 50
 
 # --- Initialize Supabase client
 try:
@@ -159,6 +128,9 @@ with st.container():
         source = st.text_input("Source", placeholder="Where did this idea come from?")
         context = st.text_area("Context", placeholder="Any additional context or background")
         
+        # Due date
+        due_date = st.date_input("Due Date", value=None)
+        
         # Tags
         tags = st.multiselect("Tags", 
                             [t["name"] for t in supabase.table("tags").select("id", "name").execute().data])
@@ -188,12 +160,11 @@ with st.container():
                     "priority_id": selected_priority_id,
                     "source": source,
                     "context": context,
+                    "due_date": due_date.isoformat() if due_date else None,
                     "creator_id": st.session_state.user_id if "user_id" in st.session_state else None
                 }
                 
                 try:
-                    # Insert idea with initial rank (0)
-                    new_idea["rank"] = 0  # Start with default rank
                     idea_response = supabase.table("poppy_ideas_v2").insert(new_idea).execute()
                     idea_id = idea_response.data[0]["id"]
                     
@@ -201,14 +172,6 @@ with st.container():
                     for tag_name in tags:
                         tag = supabase.table("tags").select("id").eq("name", tag_name).execute().data[0]
                         supabase.table("idea_tags").insert({"idea_id": idea_id, "tag_id": tag["id"]}).execute()
-                    
-                    # Get AI ranking for the new idea
-                    try:
-                        idea_data = idea_response.data[0]
-                        ai_score = get_ai_ranking_score(idea_data)
-                        supabase.table("poppy_ideas_v2").update({"rank": ai_score}).eq("id", idea_id).execute()
-                    except Exception as e:
-                        print(f"Error getting AI ranking for new idea: {str(e)}")
                     
                     st.success("Idea created successfully!")
                     st.rerun()
