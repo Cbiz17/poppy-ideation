@@ -4,6 +4,61 @@ from datetime import datetime
 import os
 import uuid
 import pandas as pd
+import openai
+
+# Initialize OpenAI
+openai.api_key = st.secrets.get("OPENAI_API_KEY", "NOT_FOUND")
+
+# Function to get AI ranking score
+def get_ai_ranking_score(idea):
+    """
+    Get an AI-assisted ranking score for an idea based on multiple factors
+    """
+    try:
+        # Combine relevant fields into a prompt
+        prompt = f"""
+        Evaluate this idea and provide a ranking score from 1-100:
+        Title: {idea['title']}
+        Description: {idea['description']}
+        Context: {idea['context']}
+        Source: {idea['source']}
+        
+        Consider the following factors:
+        1. Innovation potential
+        2. Feasibility
+        3. Impact potential
+        4. Strategic alignment
+        5. Resource requirements
+        
+        Provide only a number between 1 and 100.
+        """
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert in idea evaluation and ranking."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=10
+        )
+        
+        score = response.choices[0].message.content.strip()
+        # Ensure we get a valid number
+        try:
+            score = int(score)
+            if 1 <= score <= 100:
+                return score
+            return 50  # Default score if out of range
+        except:
+            return 50  # Default score if not a number
+            
+    except Exception as e:
+        print(f"Error getting AI ranking: {str(e)}")
+        return 50  # Default score on error
+
+# --- Page config
+st.set_page_config(page_title="Poppy Ideation", layout="wide")
 
 # --- Page config
 st.set_page_config(page_title="Poppy Ideation", layout="wide")
@@ -160,6 +215,25 @@ with st.container():
         df = pd.DataFrame(formatted_ideas)
         df['Select'] = False  # Add a selection column
         df['Rank'] = [next((i['rank'] for i in all_ideas if i['title'] == row['Title']), 0) for _, row in df.iterrows()]
+        
+        # Add a button to re-rank all ideas using AI
+        if st.button("Re-Rank All Ideas with AI"):
+            try:
+                # Get all ideas that need ranking
+                ideas_to_rank = supabase.table("poppy_ideas_v2").select("*").execute().data
+                
+                # Process each idea
+                for idea in ideas_to_rank:
+                    # Get AI ranking score
+                    score = get_ai_ranking_score(idea)
+                    
+                    # Update the idea's rank
+                    supabase.table("poppy_ideas_v2").update({"rank": score}).eq("id", idea["id"]).execute()
+                
+                st.success("All ideas have been re-ranked using AI!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error re-ranking ideas: {str(e)}")
         
         # Make the DataFrame editable
         edited_df = st.data_editor(
