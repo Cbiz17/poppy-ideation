@@ -151,11 +151,15 @@ with st.container():
             "Created At": idea["created_at"][:10]  # just the date
         })
 
-    # Display saved ideas with delete functionality
+    # Display saved ideas with ranking and management
     if formatted_ideas:
+        # Get all ideas with their rank
+        all_ideas = supabase.table("poppy_ideas_v2").select("id", "title", "rank").execute().data
+        
         # Create a DataFrame with an additional column for selection
         df = pd.DataFrame(formatted_ideas)
         df['Select'] = False  # Add a selection column
+        df['Rank'] = [next((i['rank'] for i in all_ideas if i['title'] == row['Title']), 0) for _, row in df.iterrows()]
         
         # Make the DataFrame editable
         edited_df = st.data_editor(
@@ -167,6 +171,13 @@ with st.container():
                     help="Select ideas to delete",
                     default=False,
                 ),
+                "Rank": st.column_config.NumberColumn(
+                    "Rank",
+                    help="Drag to reorder ideas",
+                    min_value=0,
+                    step=1,
+                    default=0,
+                ),
             },
             use_container_width=True
         )
@@ -174,26 +185,69 @@ with st.container():
         # Get selected ideas
         selected_ideas = edited_df[edited_df['Select'] == True]
         
-        if st.button("Delete Selected Ideas"):
-            if len(selected_ideas) == 0:
-                st.warning("Please select at least one idea to delete!")
-            else:
-                try:
-                    # Get the actual ideas from the database using their titles
-                    for _, row in selected_ideas.iterrows():
-                        idea = next(
-                            (i for i in all_ideas if i["title"] == row["Title"]),
-                            None
-                        )
-                        if idea:
-                            # Delete idea_tags first (due to foreign key constraint)
-                            supabase.table("idea_tags").delete().eq("idea_id", idea["id"]).execute()
-                            # Then delete the idea
-                            supabase.table("poppy_ideas_v2").delete().eq("id", idea["id"]).execute()
-                    st.success("Selected ideas have been deleted!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error deleting ideas: {str(e)}")
+        # Handle rank changes
+        if not edited_df.equals(df):
+            try:
+                # Update ranks in database
+                for _, row in edited_df.iterrows():
+                    idea = next(
+                        (i for i in all_ideas if i['title'] == row['Title']),
+                        None
+                    )
+                    if idea and idea['rank'] != row['Rank']:
+                        supabase.table("poppy_ideas_v2").update({"rank": row['Rank']}).eq("id", idea['id']).execute()
+                st.success("Idea ranks have been updated!")
+            except Exception as e:
+                st.error(f"Error updating ranks: {str(e)}")
+        
+        # Buttons for management actions
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("Delete Selected Ideas"):
+                if len(selected_ideas) == 0:
+                    st.warning("Please select at least one idea to delete!")
+                else:
+                    try:
+                        # Get the actual ideas from the database using their titles
+                        for _, row in selected_ideas.iterrows():
+                            idea = next(
+                                (i for i in all_ideas if i['title'] == row['Title']),
+                                None
+                            )
+                            if idea:
+                                # Delete idea_tags first (due to foreign key constraint)
+                                supabase.table("idea_tags").delete().eq("idea_id", idea['id']).execute()
+                                # Then delete the idea
+                                supabase.table("poppy_ideas_v2").delete().eq("id", idea['id']).execute()
+                        st.success("Selected ideas have been deleted!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error deleting ideas: {str(e)}")
+        
+        with col2:
+            if st.button("Promote Selected Ideas"):
+                if len(selected_ideas) == 0:
+                    st.warning("Please select at least one idea to promote!")
+                else:
+                    try:
+                        # Update the status of selected ideas to "In Progress"
+                        for _, row in selected_ideas.iterrows():
+                            idea = next(
+                                (i for i in all_ideas if i['title'] == row['Title']),
+                                None
+                            )
+                            if idea:
+                                # Get the status ID for "In Progress"
+                                status_id = next(
+                                    s['id'] for s in status_options if s['name'] == 'In Progress'
+                                )
+                                # Update the idea's status
+                                supabase.table("poppy_ideas_v2").update({"status_id": status_id}).eq("id", idea['id']).execute()
+                        st.success("Selected ideas have been promoted!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error promoting ideas: {str(e)}")
     else:
         st.info("No ideas saved yet.")
 
