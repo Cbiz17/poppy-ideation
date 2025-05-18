@@ -98,7 +98,7 @@ with st.sidebar:
     priorities = ["low", "medium", "high", "urgent"]
     statuses = ["idea", "backlog", "in_progress", "done", "blocked"]
 
-    selected_status = st.selectbox("Status", ["All"] + statuses)
+    # Removed status filter from sidebar
     selected_priority = st.selectbox("Priority", ["All"] + priorities)
     selected_category = st.selectbox("Category", ["All"] + category_names)
 
@@ -128,97 +128,106 @@ st.title("Poppy Ideation")
 
 # --- Main Layout Sections ---
 def display_main_content():
-    # Fetch items
-    query = supabase.table("items").select("*", "categories(name)", "sprints(name)")
-    if selected_status != "All":
-        query = query.eq("status", selected_status)
-    if selected_priority != "All":
-        query = query.eq("priority", selected_priority)
-    if selected_category != "All":
-        cat_id = next((c["id"] for c in category_options_data if c["name"] == selected_category), None)
-        if cat_id:
-            query = query.eq("category_id", cat_id)
-    if selected_sprint != "All":
-        sprint_id = next((s["id"] for s in sprints if s["name"] == selected_sprint), None)
-        if sprint_id:
-            query = query.eq("sprint_id", sprint_id)
-    query = query.order("rank", desc=True)
-    items_response = query.execute()
-    items = items_response.data if items_response.data else []
+    # Tabs for each status
+    statuses = ["idea", "backlog", "in_progress", "done", "blocked"]
+    status_labels = ["Idea", "Backlog", "In Progress", "Done", "Blocked"]
+    tab_objs = st.tabs(status_labels)
 
-    # Add/Edit Item Form
-    with st.form("add_edit_item_form", clear_on_submit=True):
-        title = st.text_input("Title")
-        description = st.text_area("Description")
-        status = st.selectbox("Status", statuses)
-        priority = st.selectbox("Priority", priorities)
-        category = st.selectbox("Category", category_names)
-        points = st.number_input("Points", min_value=0, max_value=100, value=0)
-        submitted = st.form_submit_button("Add Item")
-        if submitted and title:
-            category_id = next((c["id"] for c in category_options_data if c["name"] == category), None)
-            supabase.table("items").insert({
-                "title": title,
-                "description": description,
-                "status": status,
-                "priority": priority,
-                "category_id": category_id,
-                "points": points
-            }).execute()
-            st.success("Item added!")
-            st.rerun()
+    for i, (tab, status) in enumerate(zip(tab_objs, statuses)):
+        with tab:
+            # Fetch items for this status
+            query = supabase.table("items").select("*", "categories(name)", "sprints(name)")
+            query = query.eq("status", status)
+            if selected_priority != "All":
+                query = query.eq("priority", selected_priority)
+            if selected_category != "All":
+                cat_id = next((c["id"] for c in category_options_data if c["name"] == selected_category), None)
+                if cat_id:
+                    query = query.eq("category_id", cat_id)
+            if selected_sprint != "All":
+                sprint_id = next((s["id"] for s in sprints if s["name"] == selected_sprint), None)
+                if sprint_id:
+                    query = query.eq("sprint_id", sprint_id)
+            query = query.order("rank", desc=True)
+            items_response = query.execute()
+            items = items_response.data if items_response.data else []
 
-    st.markdown("---")
-    # Unified Items Table
-    if items:
-        df = pd.DataFrame(items)
-        if not df.empty:
-            df["Select"] = False
-            edited_df = st.data_editor(
-                df,
-                hide_index=True,
-                use_container_width=True,
-                column_config={
-                    "Select": st.column_config.CheckboxColumn("Select", help="Select items to manage", default=False),
-                    "rank": st.column_config.NumberColumn("Rank", help="Drag to reorder items", min_value=0, max_value=1000, step=1, format="%d"),
-                    "title": st.column_config.TextColumn("Title", help="The title of the item"),
-                    "description": None, "created_at": None
-                },
-                key="items_data_editor"
-            )
-            # Save changes
-            if st.button("Save Changes", key="save_item_changes"):
-                try:
-                    for index, row in edited_df.iterrows():
-                        original_id = df.loc[index, "id"]
-                        if row["rank"] != df.loc[index, "rank"]:
-                            supabase.table("items").update({"rank": row["rank"]}).eq("id", original_id).execute()
-                    st.success("Changes saved!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error updating items: {str(e)}")
-            # Bulk actions
-            selected_rows_df = edited_df[edited_df["Select"]]
-            if not selected_rows_df.empty:
-                st.subheader("Selected Item Actions")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Delete Selected Items", key="delete_items_button"):
-                        for item_id in selected_rows_df["id"]:
-                            supabase.table("items").delete().eq("id", item_id).execute()
-                        st.success("Selected items deleted!")
+            # Add/Edit Item Form (only in the first tab for clarity)
+            if i == 0:
+                with st.form("add_edit_item_form", clear_on_submit=True):
+                    title = st.text_input("Title")
+                    description = st.text_area("Description")
+                    form_status = st.selectbox("Status", statuses, index=0)
+                    priority = st.selectbox("Priority", priorities)
+                    category = st.selectbox("Category", category_names)
+                    points = st.number_input("Points", min_value=0, max_value=100, value=0)
+                    submitted = st.form_submit_button("Add Item")
+                    if submitted and title:
+                        category_id = next((c["id"] for c in category_options_data if c["name"] == category), None)
+                        supabase.table("items").insert({
+                            "title": title,
+                            "description": description,
+                            "status": form_status,
+                            "priority": priority,
+                            "category_id": category_id,
+                            "points": points
+                        }).execute()
+                        st.success("Item added!")
+                        # Switch to the tab matching the new item's status
+                        st.experimental_set_query_params(tab=form_status)
                         st.rerun()
-                with col2:
-                    if st.button("Promote Selected Items", key="promote_items_button"):
-                        for item_id in selected_rows_df["id"]:
-                            supabase.table("items").update({"status": "in_progress"}).eq("id", item_id).execute()
-                        st.success("Selected items promoted to In Progress!")
-                        st.rerun()
-            # AI Re-ranking button
-            if st.button("Re-Rank All Items with AI (Not Implemented)", key="re_rank_items_button"):
-                st.info("AI Re-ranking feature placeholder.")
-    else:
-        st.info("No items found based on current filters!")
+
+            st.markdown("---")
+            # Items Table for this status
+            if items:
+                df = pd.DataFrame(items)
+                if not df.empty:
+                    df["Select"] = False
+                    edited_df = st.data_editor(
+                        df,
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "Select": st.column_config.CheckboxColumn("Select", help="Select items to manage", default=False),
+                            "rank": st.column_config.NumberColumn("Rank", help="Drag to reorder items", min_value=0, max_value=1000, step=1, format="%d"),
+                            "title": st.column_config.TextColumn("Title", help="The title of the item"),
+                            "description": None, "created_at": None
+                        },
+                        key=f"items_data_editor_{status}"
+                    )
+                    # Save changes
+                    if st.button("Save Changes", key=f"save_item_changes_{status}"):
+                        try:
+                            for index, row in edited_df.iterrows():
+                                original_id = df.loc[index, "id"]
+                                if row["rank"] != df.loc[index, "rank"]:
+                                    supabase.table("items").update({"rank": row["rank"]}).eq("id", original_id).execute()
+                            st.success("Changes saved!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error updating items: {str(e)}")
+                    # Bulk actions
+                    selected_rows_df = edited_df[edited_df["Select"]]
+                    if not selected_rows_df.empty:
+                        st.subheader("Selected Item Actions")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("Delete Selected Items", key=f"delete_items_button_{status}"):
+                                for item_id in selected_rows_df["id"]:
+                                    supabase.table("items").delete().eq("id", item_id).execute()
+                                st.success("Selected items deleted!")
+                                st.rerun()
+                        with col2:
+                            if st.button("Promote Selected Items", key=f"promote_items_button_{status}"):
+                                for item_id in selected_rows_df["id"]:
+                                    supabase.table("items").update({"status": "in_progress"}).eq("id", item_id).execute()
+                                st.success("Selected items promoted to In Progress!")
+                                st.rerun()
+                    # AI Re-ranking button
+                    if st.button("Re-Rank All Items with AI (Not Implemented)", key=f"re_rank_items_button_{status}"):
+                        st.info("AI Re-ranking feature placeholder.")
+            else:
+                st.info("No items found based on current filters!")
 
 # --- Entry point ---
 if __name__ == "__main__":
