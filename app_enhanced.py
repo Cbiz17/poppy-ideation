@@ -31,7 +31,11 @@ st.success("Streamlit is up and running!")
 def get_lookup(table_name):
     items = supabase.table(table_name).select("id", "name").execute().data
     if table_name == "statuses":
+        # Debug: Show all statuses before filtering
+        st.write(f"All statuses before filtering: {[s['name'] for s in items]}")
         items = [s for s in items if s["name"] != "blocked"]
+        # Debug: Show filtered statuses
+        st.write(f"Filtered statuses: {[s['name'] for s in items]}")
     return {
         item['id']: item['name']
         for item in items
