@@ -167,8 +167,8 @@ with st.container():
             # Multi-select for ideas to delete
             selected_ideas = st.multiselect(
                 "Select ideas to delete",
-                options=all_ideas,  # Use the full list of ideas
-                format_func=lambda x: x["title"]  # Display the title
+                options=idea_options.keys(),  # Use the keys (UUIDs)
+                format_func=lambda x: idea_options[x]  # Display the title
             )
             
             if st.button("Delete Selected Ideas"):
