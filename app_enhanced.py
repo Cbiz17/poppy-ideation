@@ -2,17 +2,20 @@ import streamlit as st
 from supabase import create_client, Client
 from datetime import datetime
 import os
-from dotenv import load_dotenv
 import uuid
 import pandas as pd
 
-# --- Load environment variables
-load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-# --- Initialize Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# --- Initialize Supabase client using Streamlit secrets
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+    st.write(f"Using URL: {SUPABASE_URL}")
+    st.write(f"Key loaded: {'yes' if SUPABASE_KEY else 'no'}")
+    
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    st.error(f"Error loading secrets: {str(e)}")
+    st.stop()
 
 # --- Page config
 st.set_page_config(page_title="Poppy Ideation", layout="wide")
