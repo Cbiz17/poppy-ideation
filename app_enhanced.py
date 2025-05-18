@@ -74,18 +74,6 @@ try:
 except Exception as e:
     st.error(f"Error loading secrets: {str(e)}")
     st.stop()
-    # Get secrets
-    SUPABASE_URL = st.secrets.get("SUPABASE_URL", "NOT_FOUND")
-    SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "NOT_FOUND")
-    
-    if SUPABASE_URL == "NOT_FOUND" or SUPABASE_KEY == "NOT_FOUND":
-        st.error("Could not find Supabase credentials in secrets")
-        st.stop()
-    
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
-    st.error(f"Error loading secrets: {str(e)}")
-    st.stop()
 
 # --- Header
 st.title("Poppy Ideation")
@@ -179,7 +167,8 @@ with st.container():
                 }
                 
                 try:
-                    # Insert idea
+                    # Insert idea with initial rank (0)
+                    new_idea["rank"] = 0  # Start with default rank
                     idea_response = supabase.table("poppy_ideas_v2").insert(new_idea).execute()
                     idea_id = idea_response.data[0]["id"]
                     
@@ -187,6 +176,14 @@ with st.container():
                     for tag_name in tags:
                         tag = supabase.table("tags").select("id").eq("name", tag_name).execute().data[0]
                         supabase.table("idea_tags").insert({"idea_id": idea_id, "tag_id": tag["id"]}).execute()
+                    
+                    # Get AI ranking for the new idea
+                    try:
+                        idea_data = idea_response.data[0]
+                        ai_score = get_ai_ranking_score(idea_data)
+                        supabase.table("poppy_ideas_v2").update({"rank": ai_score}).eq("id", idea_id).execute()
+                    except Exception as e:
+                        print(f"Error getting AI ranking for new idea: {str(e)}")
                     
                     st.success("Idea created successfully!")
                     st.rerun()
@@ -198,7 +195,110 @@ with st.container():
 
     # Saved Ideas
     st.header("📁 Saved Ideas")
-    ideas_response = supabase.table("poppy_ideas_v2").select("*").execute()
+    # Get all ideas with their rank and sort by rank descending
+    ideas_response = supabase.table("poppy_ideas_v2").select("*").order("rank", desc=True).execute()
+    ideas = ideas_response.data
+    
+    if ideas:
+        # Create a DataFrame with an additional column for selection
+        df = pd.DataFrame(ideas)
+        df['Select'] = False  # Add a selection column
+        
+        # Format the DataFrame for display
+        formatted_ideas = df[{
+            'title': 'Title',
+            'description': 'Description',
+            'rank': 'Rank',
+            'status_id': 'Status',
+            'priority_id': 'Priority',
+            'category_id': 'Category',
+            'created_at': 'Created At'
+        }]
+        
+        # Replace IDs with names
+        formatted_ideas['Status'] = formatted_ideas['Status'].map(status_lookup)
+        formatted_ideas['Priority'] = formatted_ideas['Priority'].map(priority_lookup)
+        formatted_ideas['Category'] = formatted_ideas['Category'].map(category_lookup)
+        
+        # Add a button to re-rank all ideas using AI
+        if st.button("Re-Rank All Ideas with AI"):
+            try:
+                # Get all ideas that need ranking
+                ideas_to_rank = supabase.table("poppy_ideas_v2").select("*").execute().data
+                
+                # Process each idea
+                for idea in ideas_to_rank:
+                    # Get AI ranking score
+                    score = get_ai_ranking_score(idea)
+                    
+                    # Update the idea's rank
+                    supabase.table("poppy_ideas_v2").update({"rank": score}).eq("id", idea["id"]).execute()
+                
+                st.success("All ideas have been re-ranked using AI!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error re-ranking ideas: {str(e)}")
+        
+        # Make the DataFrame editable
+        edited_df = st.data_editor(
+            formatted_ideas,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                'Select': st.column_config.CheckboxColumn(
+                    "Select"
+                ),
+                'Rank': st.column_config.NumberColumn(
+                    "Rank",
+                    help="Drag to reorder ideas",
+                    min_value=0,
+                    max_value=100,
+                    step=1,
+                    format="%d"
+                ),
+                'Title': st.column_config.TextColumn(
+                    "Title",
+                    help="The title of the idea"
+                ),
+                'Description': st.column_config.TextColumn(
+                    "Description",
+                    help="The description of the idea"
+                ),
+                'Status': st.column_config.TextColumn(
+                    "Status",
+                    help="The current status of the idea"
+                ),
+                'Priority': st.column_config.TextColumn(
+                    "Priority",
+                    help="The priority level of the idea"
+                ),
+                'Category': st.column_config.TextColumn(
+                    "Category",
+                    help="The category of the idea"
+                ),
+                'Created At': st.column_config.DatetimeColumn(
+                    "Created At",
+                    help="When the idea was created"
+                )
+            }
+        )
+        
+        # Handle changes to the DataFrame
+        if not edited_df.equals(formatted_ideas):
+            try:
+                # Update the database with any changes
+                for index, row in edited_df.iterrows():
+                    original_row = formatted_ideas.iloc[index]
+                    if row['Rank'] != original_row['Rank']:
+                        supabase.table("poppy_ideas_v2").update({"rank": row['Rank']}).eq("id", ideas[index]['id']).execute()
+                
+                # Re-fetch the data to show updated rankings
+                ideas_response = supabase.table("poppy_ideas_v2").select("*").order("rank", desc=True).execute()
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error updating rankings: {str(e)}")
+    else:
+        st.info("No ideas found!")
     ideas = ideas_response.data
 
     # Format ideas
