@@ -96,6 +96,20 @@ SUPABASE_KEY=your_supabase_key
 OPENAI_API_KEY=your_openai_api_key
 ```
 
+## AI & RAG Setup
+
+To enable AI-powered features (like idea re-ranking, summarization, or retrieval-augmented generation), you must add your API keys to Streamlit secrets:
+
+1. In your `.streamlit/secrets.toml` (or via Streamlit Cloud secrets UI), add:
+   ```toml
+   OPENAI_API_KEY = "sk-..."
+   VECTOR_DB_API_KEY = "your_vector_db_key"  # Optional, for RAG features
+   ```
+2. The app will show a badge in the sidebar if AI and RAG features are enabled.
+3. If the OpenAI key is missing, AI features will be disabled and a warning will be shown.
+
+**Note:** Some features (like AI re-ranking) require the OpenAI key. RAG features may require a vector DB key (e.g., Pinecone, Weaviate, Supabase vector, etc.).
+
 ## Contributing
 
 (To be added: Guidelines for how others can contribute to this project. Consider creating a `CONTRIBUTING.md` file.)

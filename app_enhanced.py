@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os
 import uuid
 import pandas as pd
+import openai
 
 # --- Page config
 st.set_page_config(page_title="Poppy Ideation", layout="wide")
@@ -249,6 +250,29 @@ with st.sidebar:
         if st.button("Close Sprint Manager"):
             st.session_state.show_manage_sprints = False
             st.experimental_rerun()
+
+    # --- AI/RAG Secrets Check ---
+    OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", None)
+    VECTOR_DB_API_KEY = st.secrets.get("VECTOR_DB_API_KEY", None)  # Placeholder for RAG/vector DB
+    ai_enabled = bool(OPENAI_API_KEY)
+    rag_enabled = bool(VECTOR_DB_API_KEY)
+
+    # Show badge/message in sidebar
+    if ai_enabled:
+        st.success("\U0001F916 AI features enabled")
+    else:
+        st.warning("\U0001F916 AI features disabled (add OpenAI key)")
+    if rag_enabled:
+        st.info("\U0001F4D6 RAG enabled")
+    else:
+        st.info("\U0001F4D6 RAG not configured")
+
+    # Stop app if OpenAI key is required for core features
+    if not ai_enabled:
+        st.error("OpenAI API key not found in secrets. Please add it to use AI features.")
+        st.stop()
+    openai.api_key = OPENAI_API_KEY
+    # --- End AI/RAG Secrets Check ---
 
 # --- Sprint Details Card ---
 def show_sprint_details(selected_sprint_name, sprints):
