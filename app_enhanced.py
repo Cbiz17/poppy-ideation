@@ -124,17 +124,18 @@ with st.sidebar:
             current_sprint = next((s for s in sprints 
                                 if f"{s['name']} ({s['start_date']} - {s['end_date']})" == selected_sprint_name), None)
     else:
-        st.info("No sprints found. You can create one.")
+        # st.info("No sprints found. You can create one.")
         
         # --- Test Form: text_input (with NEW key) and submit button ---
         with st.form("completely_new_key_form", clear_on_submit=True):
             some_text_input = st.text_input("A New Label", key="a_brand_new_text_input_key") # BRAND NEW KEY
             
-            submitted_new_key_form = st.form_submit_button("Submit New Key Form", key="new_key_form_submit_button")
+            submitted_new_key_form = st.form_submit_button("Submit New Key Form")
             
             if submitted_new_key_form:
                 st.success(f"New key form submitted with: {some_text_input}")
         # --- End Test Form ---
+        st.stop()
 
     if current_sprint: 
         st.subheader("Sprint Metrics")
@@ -142,28 +143,28 @@ with st.sidebar:
         st.write(f"Planned Points: {get_sprint_points(current_sprint['id'])}")
         st.write(f"Velocity: {get_sprint_velocity(current_sprint['id'])}")
 
-    st.header("Filters")
-    selected_status = st.selectbox("Status", status_options_list + ["All"], index=len(status_options_list))
-    selected_priority = st.selectbox("Priority", priority_options_list + ["All"], index=len(priority_options_list))
+    # st.header("Filters")
+    # selected_status = st.selectbox("Status", status_options_list + ["All"], index=len(status_options_list))
+    # selected_priority = st.selectbox("Priority", priority_options_list + ["All"], index=len(priority_options_list))
     
-    categories_response = supabase.table("categories").select("id", "name").execute()
-    category_options_data = categories_response.data if categories_response.data else []
-    category_names = [c["name"] for c in category_options_data]
-    selected_category = st.selectbox("Category", category_names + ["All"], index=len(category_names))
+    # categories_response = supabase.table("categories").select("id", "name").execute()
+    # category_options_data = categories_response.data if categories_response.data else []
+    # category_names = [c["name"] for c in category_options_data]
+    # selected_category = st.selectbox("Category", category_names + ["All"], index=len(category_names))
 
-    # Populate lookups and selected_ids based on selections
-    status_response = supabase.table("statuses").select("id, name").execute()
-    status_data = status_response.data if status_response.data else []
-    status_lookup = {s['id']: s['name'] for s in status_data}
-    selected_status_id = next((s['id'] for s in status_data if s['name'] == selected_status), None) if selected_status != "All" else None
+    # # Populate lookups and selected_ids based on selections
+    # status_response = supabase.table("statuses").select("id, name").execute()
+    # status_data = status_response.data if status_response.data else []
+    # status_lookup = {s['id']: s['name'] for s in status_data}
+    # selected_status_id = next((s['id'] for s in status_data if s['name'] == selected_status), None) if selected_status != "All" else None
 
-    priority_response = supabase.table("priorities").select("id, name").execute()
-    priority_data = priority_response.data if priority_response.data else []
-    priority_lookup = {p['id']: p['name'] for p in priority_data}
-    selected_priority_id = next((p['id'] for p in priority_data if p['name'] == selected_priority), None) if selected_priority != "All" else None
+    # priority_response = supabase.table("priorities").select("id, name").execute()
+    # priority_data = priority_response.data if priority_response.data else []
+    # priority_lookup = {p['id']: p['name'] for p in priority_data}
+    # selected_priority_id = next((p['id'] for p in priority_data if p['name'] == selected_priority), None) if selected_priority != "All" else None
     
-    category_lookup = {c['id']: c['name'] for c in category_options_data}
-    selected_category_id = next((c['id'] for c in category_options_data if c['name'] == selected_category), None) if selected_category != "All" else None
+    # category_lookup = {c['id']: c['name'] for c in category_options_data}
+    # selected_category_id = next((c['id'] for c in category_options_data if c['name'] == selected_category), None) if selected_category != "All" else None
 
 st.title("Poppy Ideation")
 
