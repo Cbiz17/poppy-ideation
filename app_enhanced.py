@@ -104,12 +104,14 @@ with st.sidebar:
         )
         
         if selected_sprint_name == "Create New Sprint":
-            with st.form("new_sprint", clear_on_submit=True):
+            with st.form("form_key", clear_on_submit=True):
                 sprint_name_input = st.text_input("Sprint Name") # Renamed to avoid conflict
                 start_date_input = st.date_input("Start Date") # Renamed
                 end_date_input = st.date_input("End Date") # Renamed
                 
-                if st.form_submit_button("Create Sprint"):
+                submitted = st.form_submit_button("Create Sprint")
+                
+                if submitted:
                     if sprint_name_input and start_date_input and end_date_input:
                         supabase.table("sprints").insert({
                             "name": sprint_name_input,
