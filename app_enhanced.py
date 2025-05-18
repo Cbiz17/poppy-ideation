@@ -44,6 +44,8 @@ with st.sidebar:
     
     # Status filter
     status_options = supabase.table("statuses").select("id", "name").execute().data
+    # Filter out "blocked" status
+    status_options = [s for s in status_options if s["name"] != "blocked"]
     status_ids = [s["id"] for s in status_options]
     selected_status = st.selectbox("Status", 
                                  [s["name"] for s in status_options],
