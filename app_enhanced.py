@@ -8,6 +8,69 @@ import pandas as pd
 # --- Page config
 st.set_page_config(page_title="Poppy Ideation", layout="wide")
 
+# --- Custom CSS for modern, creative, collaborative look ---
+st.markdown(
+    """
+    <style>
+    html, body, [class*="css"]  { font-family: 'Inter', 'Nunito', 'Segoe UI', 'sans-serif' !important; }
+    .stApp { background-color: #F7F9FB; }
+    .stButton>button, .stForm button, .stDownloadButton>button {
+        background-color: #3A86FF;
+        color: #fff;
+        border-radius: 8px;
+        padding: 0.5em 1.2em;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(58,134,255,0.08);
+        border: none;
+        transition: background 0.2s;
+    }
+    .stButton>button:hover, .stForm button:hover, .stDownloadButton>button:hover {
+        background-color: #FFBE0B;
+        color: #22223B;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-weight: 600;
+        color: #3A86FF;
+        border-radius: 8px 8px 0 0;
+        background: #F7F9FB;
+        margin-right: 2px;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #fff;
+        color: #22223B;
+        border-bottom: 2px solid #FFBE0B;
+    }
+    .stDataFrame, .stDataEditor, .stTextInput, .stTextArea, .stSelectbox, .stNumberInput, .stExpander, .stForm {
+        border-radius: 10px !important;
+        box-shadow: 0 1px 6px rgba(34,34,59,0.04);
+        background: #fff !important;
+    }
+    .stExpanderHeader {
+        font-weight: 600;
+        color: #3A86FF;
+    }
+    .stAlert, .stInfo, .stSuccess, .stError {
+        border-radius: 8px !important;
+    }
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 0.2em 0.7em;
+        border-radius: 999px;
+        font-size: 0.9em;
+        font-weight: 600;
+        margin-right: 0.5em;
+    }
+    .status-idea { background: #E0F2FE; color: #3A86FF; }
+    .status-backlog { background: #FFF3CD; color: #FFBE0B; }
+    .status-in_progress { background: #EDE7F6; color: #8338EC; }
+    .status-done { background: #E6F4EA; color: #43AA8B; }
+    .status-blocked { background: #FFF0F3; color: #FF006E; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- Initialize Supabase client
 try:
     # Get secrets

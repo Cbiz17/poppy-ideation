@@ -1,0 +1,11 @@
+[theme]
+primaryColor = "#3A86FF"
+backgroundColor = "#F7F9FB"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#22223B"
+font = "sans serif"
+accentColor = "#FFBE0B"
+
+# Optional: success and error colors for custom CSS
+# successColor = "#43AA8B"
+# errorColor = "#FF006E" 
