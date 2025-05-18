@@ -5,10 +5,21 @@ import os
 import uuid
 import pandas as pd
 
-# --- Initialize Supabase client using Streamlit secrets
+# --- Initialize Supabase client
 try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+    # First try to load from Streamlit secrets
+    SUPABASE_URL = st.secrets.get("SUPABASE_URL")
+    SUPABASE_KEY = st.secrets.get("SUPABASE_KEY")
+    
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        # If not found in secrets, try to load from environment variables
+        SUPABASE_URL = os.getenv("SUPABASE_URL")
+        SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+        
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        st.error("Could not find Supabase credentials")
+        st.stop()
+        
     st.write(f"Using URL: {SUPABASE_URL}")
     st.write(f"Key loaded: {'yes' if SUPABASE_KEY else 'no'}")
     
