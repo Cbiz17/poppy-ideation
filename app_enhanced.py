@@ -232,15 +232,15 @@ with st.container():
             except Exception as e:
                 st.error(f"Error re-ranking ideas: {str(e)}")
         
+        # Create a separate DataFrame for display without the Select column
+        display_df = formatted_ideas.copy()
+        
         # Make the DataFrame editable
         edited_df = st.data_editor(
-            formatted_ideas,
+            display_df,
             use_container_width=True,
             hide_index=True,
             column_config={
-                'Select': st.column_config.CheckboxColumn(
-                    "Select"
-                ),
                 'Rank': st.column_config.NumberColumn(
                     "Rank",
                     help="Drag to reorder ideas",
@@ -290,6 +290,42 @@ with st.container():
                 st.rerun()
             except Exception as e:
                 st.error(f"Error updating rankings: {str(e)}")
+        
+        # Add idea management buttons
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("Delete Selected Ideas"):
+                try:
+                    # Get selected ideas
+                    selected_ideas = display_df[display_df['Select']].index
+                    if len(selected_ideas) > 0:
+                        # Delete each selected idea
+                        for idx in selected_ideas:
+                            supabase.table("poppy_ideas_v2").delete().eq("id", ideas[idx]['id']).execute()
+                        st.success("Selected ideas deleted successfully!")
+                        st.rerun()
+                    else:
+                        st.warning("Please select at least one idea to delete")
+                except Exception as e:
+                    st.error(f"Error deleting ideas: {str(e)}")
+        
+        with col2:
+            if st.button("Promote Selected Ideas"):
+                try:
+                    # Get selected ideas
+                    selected_ideas = display_df[display_df['Select']].index
+                    if len(selected_ideas) > 0:
+                        # Promote each selected idea to "In Progress"
+                        in_progress_id = next(s['id'] for s in status_options if s['name'] == "In Progress")
+                        for idx in selected_ideas:
+                            supabase.table("poppy_ideas_v2").update({"status_id": in_progress_id}).eq("id", ideas[idx]['id']).execute()
+                        st.success("Selected ideas promoted to In Progress!")
+                        st.rerun()
+                    else:
+                        st.warning("Please select at least one idea to promote")
+                except Exception as e:
+                    st.error(f"Error promoting ideas: {str(e)}")
     else:
         st.info("No ideas found!")
     ideas = ideas_response.data
