@@ -29,10 +29,7 @@ st.success("Streamlit is up and running!")
 
 # --- Helper function to get name lookups
 def get_lookup(table_name):
-    if table_name == "statuses":
-        items = supabase.table(table_name).select("id", "name").neq("name", "blocked").execute().data
-    else:
-        items = supabase.table(table_name).select("id", "name").execute().data
+    items = supabase.table(table_name).select("id", "name").execute().data
     return {
         item['id']: item['name']
         for item in items
