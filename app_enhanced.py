@@ -5,6 +5,9 @@ import os
 import uuid
 import pandas as pd
 
+# --- Page config
+st.set_page_config(page_title="Poppy Ideation", layout="wide")
+
 # --- Initialize Supabase client
 try:
     # Check if secrets exist
@@ -31,9 +34,6 @@ try:
 except Exception as e:
     st.error(f"Error loading secrets: {str(e)}")
     st.stop()
-
-# --- Page config
-st.set_page_config(page_title="Poppy Ideation", layout="wide")
 
 # --- Header
 st.title("Poppy Ideation")
