@@ -151,10 +151,41 @@ with st.container():
             "Created At": idea["created_at"][:10]  # just the date
         })
 
-    # Display saved ideas as a table
+    # Display saved ideas with delete functionality
     if formatted_ideas:
         df = pd.DataFrame(formatted_ideas)
         st.dataframe(df, use_container_width=True)
+        
+        # Add delete functionality
+        with st.expander("Manage Ideas", expanded=False):
+            # Get all ideas
+            all_ideas = supabase.table("poppy_ideas_v2").select("id", "title").execute().data
+            
+            # Create a mapping of IDs to titles for better display
+            idea_options = {idea["id"]: idea["title"] for idea in all_ideas}
+            
+            # Multi-select for ideas to delete
+            selected_ideas = st.multiselect(
+                "Select ideas to delete",
+                options=list(idea_options.keys()),
+                format_func=lambda x: idea_options[x]
+            )
+            
+            if st.button("Delete Selected Ideas"):
+                if not selected_ideas:
+                    st.warning("Please select at least one idea to delete!")
+                else:
+                    try:
+                        # Delete ideas and their associated tags
+                        for idea_id in selected_ideas:
+                            # Delete idea_tags first (due to foreign key constraint)
+                            supabase.table("idea_tags").delete().eq("idea_id", idea_id).execute()
+                            # Then delete the idea
+                            supabase.table("poppy_ideas_v2").delete().eq("id", idea_id).execute()
+                        st.success("Selected ideas have been deleted!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error deleting ideas: {str(e)}")
     else:
         st.info("No ideas saved yet.")
 
