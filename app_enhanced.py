@@ -99,27 +99,30 @@ with st.sidebar:
     status_options = supabase.table("statuses").select("id", "name").execute().data
     # Filter out "blocked" status
     status_options = [s for s in status_options if s["name"] != "blocked"]
-    status_ids = [s["id"] for s in status_options]
-    selected_status = st.selectbox("Status", 
-                                 [s["name"] for s in status_options],
-                                 index=0)
-    selected_status_id = next(s["id"] for s in status_options if s["name"] == selected_status)
+    selected_status = st.selectbox(
+        "Status",
+        [s["name"] for s in status_options] + ["All"],
+        index=len(status_options)  # Default to "All"
+    )
+    selected_status_id = next(s["id"] for s in status_options if s["name"] == selected_status) if selected_status != "All" else None
     
     # Priority filter
     priority_options = supabase.table("priorities").select("id", "name").execute().data
-    priority_ids = [p["id"] for p in priority_options]
-    selected_priority = st.selectbox("Priority", 
-                                   [p["name"] for p in priority_options],
-                                   index=0)
-    selected_priority_id = next(p["id"] for p in priority_options if p["name"] == selected_priority)
+    selected_priority = st.selectbox(
+        "Priority",
+        [p["name"] for p in priority_options] + ["All"],
+        index=len(priority_options)  # Default to "All"
+    )
+    selected_priority_id = next(p["id"] for p in priority_options if p["name"] == selected_priority) if selected_priority != "All" else None
     
     # Category filter
     category_options = supabase.table("categories").select("id", "name").execute().data
-    category_ids = [c["id"] for c in category_options]
-    selected_category = st.selectbox("Category", 
-                                   [c["name"] for c in category_options],
-                                   index=0)
-    selected_category_id = next(c["id"] for c in category_options if c["name"] == selected_category)
+    selected_category = st.selectbox(
+        "Category",
+        [c["name"] for c in category_options] + ["All"],
+        index=len(category_options)  # Default to "All"
+    )
+    selected_category_id = next(c["id"] for c in category_options if c["name"] == selected_category) if selected_category != "All" else None
 
 # --- Main Layout
 # Create new idea section
@@ -210,82 +213,90 @@ with st.container():
     # Order by rank descending
     query = query.order("rank", desc=True)
     
-    ideas_response = query.execute()
-    ideas = ideas_response.data
-    
-    if ideas:
-        # Create a DataFrame for display
-        df = pd.DataFrame(ideas)
+    try:
+        ideas_response = query.execute()
+        ideas = ideas_response.data
         
-        # Format the DataFrame
-        formatted_ideas = df[['title', 'description', 'rank', 'status_id', 'priority_id', 'category_id', 'created_at']].copy()
-        formatted_ideas.columns = ['Title', 'Description', 'Rank', 'Status', 'Priority', 'Category', 'Created At']
-        
-        # Replace IDs with names
-        formatted_ideas['Status'] = formatted_ideas['Status'].map(status_lookup)
-        formatted_ideas['Priority'] = formatted_ideas['Priority'].map(priority_lookup)
-        formatted_ideas['Category'] = formatted_ideas['Category'].map(category_lookup)
-        
-        # Display the ideas
-        st.dataframe(formatted_ideas)
-        
-        # Add management buttons
-        with st.container():
-            col1, col2, col3 = st.columns(3)
+        if ideas:
+            # Create a DataFrame for display
+            df = pd.DataFrame(ideas)
             
-            with col1:
-                if st.button("Delete Selected Ideas", key="delete_button"):
-                    try:
-                        # Get selected ideas
-                        selected_ideas = formatted_ideas[formatted_ideas['Select']].index
-                        if len(selected_ideas) > 0:
-                            # Delete each selected idea
-                            for idx in selected_ideas:
-                                supabase.table("poppy_ideas_v2").delete().eq("id", ideas[idx]['id']).execute()
-                            st.success("Selected ideas deleted successfully!")
-                            st.rerun()
-                        else:
-                            st.warning("Please select at least one idea to delete")
-                    except Exception as e:
-                        st.error(f"Error deleting ideas: {str(e)}")
+            # Format the DataFrame
+            formatted_ideas = df[['title', 'description', 'rank', 'status_id', 'priority_id', 'category_id', 'created_at']].copy()
+            formatted_ideas.columns = ['Title', 'Description', 'Rank', 'Status', 'Priority', 'Category', 'Created At']
             
-            with col2:
-                if st.button("Promote Selected Ideas", key="promote_button"):
-                    try:
-                        # Get selected ideas
-                        selected_ideas = formatted_ideas[formatted_ideas['Select']].index
-                        if len(selected_ideas) > 0:
-                            # Promote each selected idea to "In Progress"
-                            in_progress_id = next(s['id'] for s in status_options if s['name'] == "In Progress")
-                            for idx in selected_ideas:
-                                supabase.table("poppy_ideas_v2").update({"status_id": in_progress_id}).eq("id", ideas[idx]['id']).execute()
-                            st.success("Selected ideas promoted to In Progress!")
-                            st.rerun()
-                        else:
-                            st.warning("Please select at least one idea to promote")
-                    except Exception as e:
-                        st.error(f"Error promoting ideas: {str(e)}")
+            # Replace IDs with names
+            formatted_ideas['Status'] = formatted_ideas['Status'].map(status_lookup)
+            formatted_ideas['Priority'] = formatted_ideas['Priority'].map(priority_lookup)
+            formatted_ideas['Category'] = formatted_ideas['Category'].map(category_lookup)
             
-            with col3:
-                if st.button("Re-Rank All Ideas with AI", key="re_rank_button"):
-                    try:
-                        # Get all ideas that need ranking
-                        ideas_to_rank = supabase.table("poppy_ideas_v2").select("*").execute().data
-                        
-                        # Process each idea
-                        for idea in ideas_to_rank:
-                            # Get AI ranking score
-                            score = get_ai_ranking_score(idea)
+            # Display the ideas with a checkbox for selection
+            st.dataframe(
+                formatted_ideas,
+                hide_index=True,
+                use_container_width=True
+            )
+            
+            # Add management buttons
+            with st.container():
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    if st.button("Delete Selected Ideas", key="delete_button"):
+                        try:
+                            # Get selected ideas
+                            selected_ideas = st.session_state.get('selected_ideas', [])
+                            if selected_ideas:
+                                # Delete each selected idea
+                                for idea_id in selected_ideas:
+                                    supabase.table("poppy_ideas_v2").delete().eq("id", idea_id).execute()
+                                st.success("Selected ideas deleted successfully!")
+                                st.rerun()
+                            else:
+                                st.warning("Please select at least one idea to delete")
+                        except Exception as e:
+                            st.error(f"Error deleting ideas: {str(e)}")
+                
+                with col2:
+                    if st.button("Promote Selected Ideas", key="promote_button"):
+                        try:
+                            # Get selected ideas
+                            selected_ideas = st.session_state.get('selected_ideas', [])
+                            if selected_ideas:
+                                # Promote each selected idea to "In Progress"
+                                in_progress_id = next(s['id'] for s in status_options if s['name'] == "In Progress")
+                                for idea_id in selected_ideas:
+                                    supabase.table("poppy_ideas_v2").update({"status_id": in_progress_id}).eq("id", idea_id).execute()
+                                st.success("Selected ideas promoted to In Progress!")
+                                st.rerun()
+                            else:
+                                st.warning("Please select at least one idea to promote")
+                        except Exception as e:
+                            st.error(f"Error promoting ideas: {str(e)}")
+                
+                with col3:
+                    if st.button("Re-Rank All Ideas with AI", key="re_rank_button"):
+                        try:
+                            # Get all ideas that need ranking
+                            ideas_to_rank = supabase.table("poppy_ideas_v2").select("*").execute().data
                             
-                            # Update the idea's rank
-                            supabase.table("poppy_ideas_v2").update({"rank": score}).eq("id", idea["id"]).execute()
-                        
-                        st.success("All ideas have been re-ranked using AI!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error re-ranking ideas: {str(e)}")
-    else:
-        st.info("No ideas found!")
+                            # Process each idea
+                            for idea in ideas_to_rank:
+                                # Get AI ranking score
+                                score = get_ai_ranking_score(idea)
+                                
+                                # Update the idea's rank
+                                supabase.table("poppy_ideas_v2").update({"rank": score}).eq("id", idea["id"]).execute()
+                            
+                            st.success("All ideas have been re-ranked using AI!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error re-ranking ideas: {str(e)}")
+        else:
+            st.info("No ideas found!")
+            
+    except Exception as e:
+        st.error(f"Error fetching ideas: {str(e)}")
 
     # Format ideas
     formatted_ideas = []
