@@ -123,21 +123,16 @@ with st.sidebar:
                                 if f"{s['name']} ({s['start_date']} - {s['end_date']})" == selected_sprint_name), None)
     else:
         st.info("No sprints found. You can create one.")
-        if st.button("Create First Sprint"):
-             # Minimal form for creating first sprint if none exist
-            with st.form("initial_new_sprint", clear_on_submit=True):
-                sprint_name_input = st.text_input("Sprint Name", key="init_sprint_name")
-                start_date_input = st.date_input("Start Date", key="init_start_date")
-                end_date_input = st.date_input("End Date", key="init_end_date")
-                if st.form_submit_button("Create Sprint", key="init_create_sprint"):
-                    if sprint_name_input and start_date_input and end_date_input:
-                        supabase.table("sprints").insert({
-                            "name": sprint_name_input,
-                            "start_date": start_date_input.isoformat(),
-                            "end_date": end_date_input.isoformat(),
-                            "status": "planned"
-                        }).execute()
-                        st.rerun()
+        
+        # --- Minimal Test Form ---
+        with st.form("some_unique_key", clear_on_submit=True):
+            st.write("Minimal Test Form")
+            test_text = st.text_input("Test Input", key="test_form_text_input")
+            submitted = st.form_submit_button("Submit")
+            
+            if submitted:
+                st.success(f"Test form submitted with: {test_text}")
+        # --- End Minimal Test Form ---
 
     if current_sprint: 
         st.subheader("Sprint Metrics")
@@ -211,7 +206,7 @@ def display_main_content():
                             for tag_name in tags_multiselect:
                                 tag_id = next((t["id"] for t in tags_data if t["name"] == tag_name), None)
                                 if tag_id:
-                                    supabase.table("idea_tags").insert({"idea_id": item_id, "tag_id": tag_id}).execute() # Ensure correct table name: idea_tags or backlog_item_tags
+                                    supabase.table("backlog_item_tags").insert({"backlog_item_id": item_id, "tag_id": tag_id}).execute()
                             st.success("Backlog item created successfully!")
                             st.rerun()
                         else:
@@ -283,7 +278,7 @@ def display_main_content():
                 with col1:
                     if st.button("Delete Selected Ideas", key="delete_ideas_button"):
                         for idea_id_to_delete in selected_rows_df['ID']:
-                            supabase.table("idea_tags").delete().eq("idea_id", idea_id_to_delete).execute() # Clear related tags first
+                            supabase.table("backlog_item_tags").delete().eq("backlog_item_id", idea_id_to_delete).execute()
                             supabase.table("poppy_ideas_v2").delete().eq("id", idea_id_to_delete).execute()
                         st.success("Selected ideas deleted successfully!")
                         st.rerun()

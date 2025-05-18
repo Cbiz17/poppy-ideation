@@ -95,3 +95,11 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
 OPENAI_API_KEY=your_openai_api_key
 ```
+
+## Contributing
+
+(To be added: Guidelines for how others can contribute to this project. Consider creating a `CONTRIBUTING.md` file.)
+
+## License
+
+(To be added: Specify the license under which this project is shared. For example, MIT, Apache 2.0, etc. Consider creating a `LICENSE.md` file.)
