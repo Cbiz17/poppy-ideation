@@ -167,8 +167,8 @@ with st.container():
             # Multi-select for ideas to delete
             selected_ideas = st.multiselect(
                 "Select ideas to delete",
-                options=list(idea_options.keys()),
-                format_func=lambda x: idea_options[x]
+                options=all_ideas,  # Use the full list of ideas
+                format_func=lambda x: x["title"]  # Display the title
             )
             
             if st.button("Delete Selected Ideas"):
@@ -177,7 +177,8 @@ with st.container():
                 else:
                     try:
                         # Delete ideas and their associated tags
-                        for idea_id in selected_ideas:
+                        for idea in selected_ideas:
+                            idea_id = idea["id"]  # Get the UUID from the idea object
                             # Delete idea_tags first (due to foreign key constraint)
                             supabase.table("idea_tags").delete().eq("idea_id", idea_id).execute()
                             # Then delete the idea
