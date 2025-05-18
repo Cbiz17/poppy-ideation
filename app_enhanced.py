@@ -40,29 +40,45 @@ def get_ai_ranking_score(idea):
         print(f"Getting AI ranking for idea: {idea['title']}")
         print(f"Prompt: {prompt}")
         
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are an expert in idea evaluation and ranking."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=10
-        )
+        # Set a timeout for the API call
+        timeout = 10  # 10 seconds
         
-        score = response.choices[0].message.content.strip()
-        print(f"AI response: {score}")  # Debug log
-        
-        # Ensure we get a valid number
         try:
-            score = int(score)
-            print(f"Parsed score: {score}")  # Debug log
-            if 1 <= score <= 100:
-                return score
-            return 50  # Default score if out of range
-        except:
-            print(f"Error parsing score: {score}")  # Debug log
-            return 50  # Default score if not a number
+            # Make the API call with timeout
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are an expert in idea evaluation and ranking."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=10,
+                timeout=timeout
+            )
+            
+            score = response.choices[0].message.content.strip()
+            print(f"AI response: {score}")  # Debug log
+            
+            # Ensure we get a valid number
+            try:
+                score = int(score)
+                print(f"Parsed score: {score}")  # Debug log
+                if 1 <= score <= 100:
+                    return score
+                return 50  # Default score if out of range
+            except:
+                print(f"Error parsing score: {score}")  # Debug log
+                return 50  # Default score if not a number
+                
+        except openai.error.Timeout as e:
+            print(f"OpenAI API timeout after {timeout} seconds")
+            return 50  # Return default score on timeout
+        except openai.error.APIError as e:
+            print(f"OpenAI API error: {str(e)}")
+            return 50  # Return default score on API error
+        except Exception as e:
+            print(f"Error in API call: {str(e)}")
+            return 50  # Return default score on any other error
             
     except Exception as e:
         print(f"Error getting AI ranking: {str(e)}")
